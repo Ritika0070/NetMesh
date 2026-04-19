@@ -1,0 +1,164 @@
+import { useEffect, useState } from "react";
+import LandingPage from "./pages/LandingPage";
+import RegisterPage from "./pages/RegisterPage";
+import LoginPage from "./pages/LoginPage";
+import JoinSessionPage from "./pages/JoinSessionPage";
+import DashboardPage from "./pages/DashboardPage";
+import "./App.css";
+
+const PAGE_PATHS = {
+  landing: "/",
+  register: "/register",
+  login: "/login",
+  "join-session": "/join-session",
+  dashboard: "/dashboard",
+};
+
+function getDefaultPage(savedUser, savedSession) {
+  if (savedUser && savedSession) return "dashboard";
+  if (savedUser) return "join-session";
+  return "landing";
+}
+
+function getPageFromPath(pathname, savedUser, savedSession) {
+  switch (pathname) {
+    case "/":
+      return "landing";
+    case "/register":
+      return savedUser ? getDefaultPage(savedUser, savedSession) : "register";
+    case "/login":
+      return savedUser ? getDefaultPage(savedUser, savedSession) : "login";
+    case "/join-session":
+      return savedUser ? "join-session" : "landing";
+    case "/dashboard":
+      return savedUser && savedSession
+        ? "dashboard"
+        : getDefaultPage(savedUser, savedSession);
+    default:
+      return getDefaultPage(savedUser, savedSession);
+  }
+}
+
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [page, setPage] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    const savedSession = localStorage.getItem("sessionInfo");
+    return getPageFromPath(window.location.pathname, savedUser, savedSession);
+  });
+  const [sessionInfo, setSessionInfo] = useState(() => {
+    const saved = localStorage.getItem("sessionInfo");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  function goToPage(nextPage, { replace = false } = {}) {
+    const nextPath = PAGE_PATHS[nextPage] || "/";
+    const currentPath = window.location.pathname;
+
+    setPage(nextPage);
+
+    if (currentPath === nextPath) return;
+
+    const historyMethod = replace ? "replaceState" : "pushState";
+    window.history[historyMethod]({ page: nextPage }, "", nextPath);
+  }
+
+  useEffect(() => {
+    if (sessionInfo) {
+      localStorage.setItem("sessionInfo", JSON.stringify(sessionInfo));
+    } else {
+      localStorage.removeItem("sessionInfo");
+    }
+  }, [sessionInfo]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const savedUser = localStorage.getItem("user");
+      const savedSession = localStorage.getItem("sessionInfo");
+      setPage(getPageFromPath(window.location.pathname, savedUser, savedSession));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const expectedPath = PAGE_PATHS[page] || "/";
+    if (window.location.pathname !== expectedPath) {
+      window.history.replaceState({ page }, "", expectedPath);
+    }
+  }, [page]);
+
+  function handleRegisterSuccess(user) {
+    setCurrentUser(user);
+    goToPage("join-session");
+  }
+
+  function handleLoginSuccess(user) {
+    setCurrentUser(user);
+    goToPage("join-session");
+  }
+
+  function handleJoinSession(sid, requirement, sessionInterests, expiresAt) {
+    setSessionInfo({ sessionId: sid, requirement, sessionInterests, expiresAt });
+    goToPage("dashboard");
+  }
+
+  function handleLeaveSession() {
+    setSessionInfo(null);
+    goToPage("join-session");
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("sessionInfo");
+    setCurrentUser(null);
+    setSessionInfo(null);
+    goToPage("landing", { replace: true });
+  }
+
+  return (
+    <>
+      {page === "landing" && (
+        <LandingPage
+          onGoToLogin={() => goToPage("login")}
+          onGoToRegister={() => goToPage("register")}
+        />
+      )}
+      {page === "register" && (
+        <RegisterPage
+          onRegisterSuccess={handleRegisterSuccess}
+          onGoToLogin={() => goToPage("login")}
+        />
+      )}
+      {page === "login" && (
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onGoToRegister={() => goToPage("register")}
+        />
+      )}
+      {page === "join-session" && currentUser && (
+        <JoinSessionPage
+          currentUser={currentUser}
+          onJoinSuccess={handleJoinSession}
+          onLogout={handleLogout}
+        />
+      )}
+      {page === "dashboard" && currentUser && sessionInfo && (
+        <DashboardPage
+          currentUser={currentUser}
+          sessionId={sessionInfo.sessionId}
+          requirement={sessionInfo.requirement}
+          sessionInterests={sessionInfo.sessionInterests}
+          expiresAt={sessionInfo.expiresAt}
+          onLeaveSession={handleLeaveSession}
+          onLogout={handleLogout}
+        />
+      )}
+    </>
+  );
+}
