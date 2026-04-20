@@ -1,38 +1,74 @@
 import User from "../models/User.js";
 import Session from "../models/Session.js";
 
-function getMatchPercent(userInterests, otherInterests) {
-  if (!userInterests.length || !otherInterests.length) return 0;
-  const set = new Set(userInterests);
-  const matches = otherInterests.filter(i => set.has(i)).length;
-  const total = new Set([...userInterests, ...otherInterests]).size;
-  return Math.round((matches / total) * 100);
+function toSafeNumber(value, fallback = 0) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeString(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function sanitizeInterests(interests) {
+  return Array.isArray(interests)
+    ? interests.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+}
+
+function getInterestScore(userInterests, otherInterests) {
+  const current = sanitizeInterests(userInterests);
+  const other   = sanitizeInterests(otherInterests);
+
+  if (!current.length || !other.length) return 0;
+
+  const currentSet = new Set(current.map(normalizeString));
+  const otherSet   = new Set(other.map(normalizeString));
+  const union      = new Set([...currentSet, ...otherSet]);
+
+  if (union.size === 0) return 0;
+
+  let matches = 0;
+  for (const interest of otherSet) {
+    if (currentSet.has(interest)) matches += 1;
+  }
+
+  return toSafeNumber(Math.round((matches / union.size) * 100));
 }
 
 function cosine(a, b) {
   if (!a?.length || !b?.length) return 0;
-  const dot = a.reduce((sum, v, i) => sum + v * b[i], 0);
-  const magA = Math.sqrt(a.reduce((sum, v) => sum + v * v, 0));
-  const magB = Math.sqrt(b.reduce((sum, v) => sum + v * v, 0));
+
+  const limit = Math.min(a.length, b.length);
+  if (limit === 0) return 0;
+
+  let dot = 0, magASquared = 0, magBSquared = 0;
+
+  for (let i = 0; i < limit; i++) {
+    const av = Number(a[i]);
+    const bv = Number(b[i]);
+    if (!Number.isFinite(av) || !Number.isFinite(bv)) continue;
+    dot          += av * bv;
+    magASquared  += av * av;
+    magBSquared  += bv * bv;
+  }
+
+  const magA = Math.sqrt(magASquared);
+  const magB = Math.sqrt(magBSquared);
   if (magA === 0 || magB === 0) return 0;
-  return dot / (magA * magB);
+
+  return toSafeNumber(dot / (magA * magB));
 }
 
-const REQUIREMENT_INTERESTS = {
-  "Networking":        [],
-  "Job Opportunities": ["Startups", "Fintech", "Marketing"],
-  "Collaboration":     ["AI", "Design", "Robotics", "Web3"],
-  "Mentorship":        ["Education", "AI", "Startups"],
-  "Investment":        ["Startups", "Fintech", "Web3"],
-  "Co-founder Hunt":   ["Startups", "AI", "Design", "Robotics"],
-};
+function getBioScore(currentEmbedding, otherEmbedding) {
+  return toSafeNumber(Math.round(Math.max(0, cosine(currentEmbedding, otherEmbedding)) * 100));
+}
 
-function getRequirementBoost(requirement, otherInterests) {
-  if (!requirement) return 0;
-  const related = REQUIREMENT_INTERESTS[requirement] || [];
-  if (related.length === 0) return 0;
-  const matches = otherInterests.filter(i => related.includes(i)).length;
-  return Math.round((matches / related.length) * 20);
+function getGoalScore(currentRequirement, otherRequirement) {
+  const current = normalizeString(currentRequirement);
+  const other   = normalizeString(otherRequirement);
+  if (!current || !other) return 0;
+  if (current === other) return 100;
+  return 0;
 }
 
 export async function getRecommendations(req, res) {
@@ -40,60 +76,88 @@ export async function getRecommendations(req, res) {
     const currentUserId = req.user.userId;
     const { sessionId, interests, exclude, requirement } = req.query;
 
-    if (!sessionId)
+    if (!sessionId) {
       return res.status(400).json({ message: "sessionId is required." });
+    }
 
     const session = await Session.findOne({ sessionId });
-    if (!session)
+    if (!session) {
       return res.status(404).json({ message: "Session not found." });
+    }
 
-    const userInterests = interests
-      ? interests.split(",").map(i => i.trim())
+    const currentSessionInterests = interests
+      ? interests.split(",").map((item) => item.trim()).filter(Boolean)
       : [];
 
-    const excludeIds = exclude ? exclude.split(",") : [];
+    const excludeIds = exclude ? exclude.split(",").filter(Boolean) : [];
 
     const currentUser = await User.findById(currentUserId).select("embedding");
 
-    const filteredParticipants = session.participants.filter(pid => {
-      if (pid.toString() === currentUserId) return false;
-      if (excludeIds.includes(pid.toString())) return false;
+    // Build preference map — only for users who have saved preferences
+    const participantPreferenceMap = new Map(
+      (session.participantPreferences || []).map((item) => [
+        item.userId.toString(),
+        {
+          requirement: item.requirement || "",
+          interests:   sanitizeInterests(item.interests),
+        },
+      ])
+    );
+
+    // FIX: Removed the `!participantPreferenceMap.has(id)` check.
+    // Previously, any participant who hadn't saved preferences was silently
+    // excluded — meaning two fresh users could never see each other.
+    // Now we include ALL session participants (except self and excluded),
+    // and fall back to their profile interests if no session preferences exist.
+    const filteredParticipants = session.participants.filter((participantId) => {
+      const id = participantId.toString();
+      if (id === currentUserId)        return false;
+      if (excludeIds.includes(id))     return false;
       return true;
     });
 
-    if (filteredParticipants.length === 0)
+    if (filteredParticipants.length === 0) {
       return res.json({ success: true, recommendations: [] });
+    }
 
     const users = await User.find({ _id: { $in: filteredParticipants } })
       .select("name bio interests embedding");
 
-    const scored = users.map(user => {
-      const interestScore    = getMatchPercent(userInterests, user.interests);
-      const semanticScore    = Math.round(
-        Math.max(0, cosine(currentUser.embedding, user.embedding)) * 100
-      );
-      const requirementBoost = getRequirementBoost(requirement, user.interests);
+    const scored = users
+      .filter((user) => user != null) // safety: skip any null results
+      .map((user) => {
+        // Use session preferences if available, otherwise fall back to profile
+        const sessionPreference = participantPreferenceMap.get(user._id.toString());
+        const otherInterests    = sessionPreference?.interests?.length
+          ? sessionPreference.interests
+          : sanitizeInterests(user.interests);
+        const otherRequirement  = sessionPreference?.requirement || "";
 
-      const hasEmbeddings =
-        currentUser.embedding?.length > 0 && user.embedding?.length > 0;
+        const bioScore      = getBioScore(currentUser?.embedding, user.embedding);
+        const interestScore = getInterestScore(currentSessionInterests, otherInterests);
+        const goalScore     = getGoalScore(requirement, otherRequirement);
 
-      const baseScore = hasEmbeddings
-        ? Math.round(semanticScore * 0.6 + interestScore * 0.4)
-        : interestScore;
+        const finalScore = Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(0.6 * bioScore + 0.3 * interestScore + 0.1 * goalScore)
+          )
+        );
 
-      const finalScore = Math.min(100, baseScore + requirementBoost);
-
-      return {
-        id:         user._id,
-        name:       user.name,
-        bio:        user.bio,
-        interests:  user.interests,
-        avatar:     user.name.split(" ").map(n => n[0]).join("").toUpperCase(),
-        matchScore: finalScore,
-      };
-    }).sort((a, b) => b.matchScore - a.matchScore);
+        return {
+          id:         user._id,
+          name:       user.name,
+          bio:        user.bio || "",
+          interests:  otherInterests,
+          avatar:     user.name.split(" ").map((part) => part[0]).join("").toUpperCase(),
+          matchScore: finalScore,
+        };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore);
 
     res.json({ success: true, recommendations: scored.slice(0, 5) });
+
   } catch (err) {
     console.error("Recommend error:", err);
     res.status(500).json({ message: "Server error.", error: err.message });

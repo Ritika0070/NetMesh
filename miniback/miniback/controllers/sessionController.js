@@ -1,15 +1,16 @@
 import Session from "../models/Session.js";
+import Connection from "../models/Connection.js";
+import Notification from "../models/Notification.js";
+import Message from "../models/Message.js";
 
 export async function createSession(req, res) {
   try {
     const { name, durationMinutes } = req.body;
     const createdBy = req.user.name;
-    const creatorId = req.user.userId;
 
     if (!name || !name.trim())
       return res.status(400).json({ message: "Session name is required." });
 
-    // Default 120 mins, max 1 day (1440 mins)
     const duration = Math.min(Math.max(parseInt(durationMinutes) || 120, 1), 1440);
     const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
@@ -25,7 +26,7 @@ export async function createSession(req, res) {
       sessionId,
       name,
       createdBy,
-      participants: [creatorId],
+      participants: [],
       expiresAt,
     });
 
@@ -46,7 +47,7 @@ export async function createSession(req, res) {
 
 export async function joinSession(req, res) {
   try {
-    const { sessionId } = req.body;
+    const { sessionId, requirement = "", sessionInterests = [] } = req.body;
     const userId = req.user.userId;
 
     if (!sessionId)
@@ -61,8 +62,28 @@ export async function joinSession(req, res) {
 
     if (!session.participants.includes(userId)) {
       session.participants.push(userId);
-      await session.save();
     }
+
+    const safeInterests = Array.isArray(sessionInterests)
+      ? sessionInterests.filter(Boolean)
+      : [];
+
+    const existingPreference = session.participantPreferences.find(
+      (item) => item.userId.toString() === userId
+    );
+
+    if (existingPreference) {
+      existingPreference.requirement = requirement;
+      existingPreference.interests = safeInterests;
+    } else {
+      session.participantPreferences.push({
+        userId,
+        requirement,
+        interests: safeInterests,
+      });
+    }
+
+    await session.save();
 
     res.json({
       success:     true,
@@ -73,5 +94,49 @@ export async function joinSession(req, res) {
   } catch (err) {
     console.error("Join session error:", err);
     res.status(500).json({ message: "Server error." });
+  }
+}
+
+export async function leaveSession(req, res) {
+  try {
+    const { sessionId } = req.body;
+    const userId = req.user.userId;
+
+    if (!sessionId)
+      return res.status(400).json({ success: false, message: "sessionId is required." });
+
+    // 1. Remove user from session participants + preferences
+    await Session.updateOne(
+      { sessionId },
+      {
+        $pull: {
+          participants: userId,
+          participantPreferences: { userId },
+        },
+      }
+    );
+
+    // 2. Delete all connections this user had in this session
+    await Connection.deleteMany({
+      sessionId,
+      $or: [{ user1Id: userId }, { user2Id: userId }],
+    });
+
+    // 3. Delete all notifications sent to OR from this user in this session
+    await Notification.deleteMany({
+      sessionId,
+      $or: [{ userId }, { senderId: userId }],
+    });
+
+    // 4. Delete all messages sent to OR from this user in this session
+    await Message.deleteMany({
+      sessionId,
+      $or: [{ fromUserId: userId }, { toUserId: userId }],
+    });
+
+    res.json({ success: true, message: "Left session successfully." });
+  } catch (err) {
+    console.error("Leave session error:", err);
+    res.status(500).json({ success: false, message: "Server error." });
   }
 }

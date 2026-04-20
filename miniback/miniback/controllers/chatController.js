@@ -3,6 +3,7 @@ import Connection from "../models/Connection.js";
 import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import BlockedUser from "../models/BlockedUser.js";
+import Session from "../models/Session.js";
 
 async function isBlockedForSession({ sessionId, senderId, recipientId }) {
   return BlockedUser.findOne({
@@ -46,6 +47,52 @@ async function ensureConnection({ sessionId, myUserId, targetUserId }) {
 
   await connection.save();
   return connection;
+}
+
+export async function getConnections(req, res) {
+  try {
+    const { sessionId } = req.query;
+    const myUserId = req.user.userId;
+
+    if (!sessionId) {
+      return res.status(400).json({ message: "sessionId is required." });
+    }
+
+    const connections = await Connection.find({
+      sessionId,
+      $or: [{ user1Id: myUserId }, { user2Id: myUserId }],
+    });
+
+    if (connections.length === 0) {
+      return res.json({ success: true, connections: [] });
+    }
+
+    const otherUserIds = connections.map((conn) =>
+      conn.user1Id.toString() === myUserId
+        ? conn.user2Id
+        : conn.user1Id
+    );
+
+    const users = await User.find({ _id: { $in: otherUserIds } }).select("name bio interests");
+
+    const profiles = users.map((user) => ({
+      id: user._id,
+      name: user.name,
+      bio: user.bio || "",
+      interests: user.interests || [],
+      avatar: user.name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase(),
+      matchScore: 0,
+    }));
+
+    res.json({ success: true, connections: profiles });
+  } catch (err) {
+    console.error("Get connections error:", err);
+    res.status(500).json({ message: "Server error." });
+  }
 }
 
 export async function sendMessage(req, res) {
@@ -219,6 +266,15 @@ export async function respondToConnectionRequest(req, res) {
       notification.read = true;
       await notification.save();
 
+      const acceptingUser = await User.findById(myUserId).select("name");
+      await createNotification({
+        userId: notification.senderId._id,
+        senderId: myUserId,
+        sessionId: notification.sessionId,
+        type: "message",
+        message: `${acceptingUser?.name || "Someone"} accepted your connection request!`,
+      });
+
       return res.json({
         success: true,
         message: "Connection accepted.",
@@ -277,6 +333,46 @@ export async function respondToConnectionRequest(req, res) {
     });
   } catch (err) {
     console.error("Respond to connection request error:", err);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+}
+
+export async function leaveSession(req, res) {
+  try {
+    const { sessionId } = req.body;
+    const userId = req.user.userId;
+
+    if (!sessionId)
+      return res.status(400).json({ success: false, message: "sessionId is required." });
+
+    await Session.updateOne(
+      { sessionId },
+      {
+        $pull: {
+          participants: userId,
+          participantPreferences: { userId },
+        },
+      }
+    );
+
+    await Connection.deleteMany({
+      sessionId,
+      $or: [{ user1Id: userId }, { user2Id: userId }],
+    });
+
+    await Notification.deleteMany({
+      sessionId,
+      $or: [{ userId }, { senderId: userId }],
+    });
+
+    await Message.deleteMany({
+      sessionId,
+      $or: [{ fromUserId: userId }, { toUserId: userId }],
+    });
+
+    res.json({ success: true, message: "Left session successfully." });
+  } catch (err) {
+    console.error("Leave session error:", err);
     res.status(500).json({ success: false, message: "Server error." });
   }
 }

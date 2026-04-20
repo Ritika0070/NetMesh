@@ -30,25 +30,21 @@ const Session = mongoose.model("Session", sessionSchema);
 async function addUsers() {
   console.log("Connecting to MongoDB...");
   await mongoose.connect(process.env.MONGO_URI);
-  console.log("✅ Connected!");
+  console.log("[OK] Connected!");
 
-  // Find the session
   const session = await Session.findOne({ sessionId: SESSION_ID });
   if (!session) {
-    console.error(`❌ Session ${SESSION_ID} not found!`);
+    console.error(`[ERROR] Session ${SESSION_ID} not found!`);
     process.exit(1);
   }
-  console.log(`✅ Found session: ${session.name} (${SESSION_ID})`);
+  console.log(`[OK] Found session: ${session.name} (${SESSION_ID})`);
   console.log(`   Current participants: ${session.participants.length}`);
 
-  // Extend session expiry to 48 hours from now so it doesn't expire
   session.expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
-  // Get all seeded users (emails contain a number pattern)
   const seededUsers = await User.find({ email: /\.\d+@/ }).select("_id name");
   console.log(`   Found ${seededUsers.length} seeded users to add`);
 
-  // Add all seeded user IDs to participants (avoid duplicates)
   const existingIds = new Set(session.participants.map(id => id.toString()));
   let added = 0;
 
@@ -61,7 +57,7 @@ async function addUsers() {
 
   await session.save();
 
-  console.log(`✅ Added ${added} users to session ${SESSION_ID}`);
+  console.log(`[OK] Added ${added} users to session ${SESSION_ID}`);
   console.log(`   Total participants now: ${session.participants.length}`);
   console.log(`   Session extended to 48 hours`);
   console.log("\nGo refresh your app — you should now see recommendations!");
