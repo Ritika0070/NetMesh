@@ -128,20 +128,29 @@
   display:flex; flex-wrap:wrap; gap:14px;
   justify-content:center; margin-bottom:64px;
 }
-.lp-hero-stats {
-  display:flex; align-items:center; justify-content:center;
-  gap:0; flex-wrap:wrap;
-  background:rgba(196,160,80,0.04);
-  border:1px solid rgba(196,160,80,0.12);
-  border-radius:4px; padding:20px 40px;
+
+/* ── Trust Strip ── */
+.lp-trust-strip {
+  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  padding:14px 24px;
+  border:1px solid rgba(196,160,80,0.1);
+  border-radius:4px;
+  background:rgba(196,160,80,0.03);
 }
-.lp-stat { text-align:center; padding:0 32px; }
-.lp-stat-num {
-  display:block; font-family:'Cormorant Garamond',serif;
-  font-size:28px; font-weight:400; font-style:italic; color:#DDB96A;
+.lp-trust-label {
+  font-size:10px; font-weight:600; letter-spacing:0.18em;
+  text-transform:uppercase; color:#6B5A40; white-space:nowrap;
+  padding-right:8px; border-right:1px solid rgba(196,160,80,0.15);
+  margin-right:4px;
 }
-.lp-stat-label { font-size:10px; color:#6B5A40; letter-spacing:0.14em; text-transform:uppercase; margin-top:4px; }
-.lp-stat-divider { width:1px; height:36px; background:rgba(196,160,80,0.14); }
+.lp-trust-items { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.lp-trust-item {
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; font-weight:500; letter-spacing:0.08em;
+  color:#8A7A60; white-space:nowrap;
+}
+.lp-trust-item svg { opacity:0.55; flex-shrink:0; }
+.lp-trust-dot { width:3px; height:3px; border-radius:50%; background:rgba(196,160,80,0.25); flex-shrink:0; }
 
 /* ── Shared Section ── */
 .lp-section-label {
@@ -172,9 +181,8 @@
   pointer-events:none; opacity:0; transition:opacity 0.3s;
 }
 .lp-card:hover .lp-card-shine { opacity:1; }
-/* accent classes kept but unified */
 .lp-card--purple:hover,.lp-card--teal:hover,.lp-card--blue:hover {}
-.lp-card-icon { font-size:24px; margin-bottom:20px; display:block; opacity:0.8; }
+.lp-card-icon { width:40px; height:40px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; opacity:0.75; color:#C4A050; }
 .lp-card-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:500; color:#F0E8D8; margin:0 0 10px; letter-spacing:0.02em; }
 .lp-card-body { font-size:13px; color:#6B5A40; line-height:1.75; margin:0; letter-spacing:0.03em; font-weight:300; }
 
@@ -202,7 +210,7 @@
 .lp-tag--blue { background:rgba(196,160,80,0.04); border-color:rgba(196,160,80,0.15); color:#A89878; }
 .lp-tag--purple { background:rgba(196,160,80,0.07); border-color:rgba(196,160,80,0.2); color:#C4A050; }
 
-/* Step visuals */
+/* ── Step Visuals ── */
 .lp-step-visual {
   background:rgba(196,160,80,0.03); border:1px solid rgba(196,160,80,0.1);
   border-radius:4px; padding:22px; display:flex; flex-direction:column; gap:14px; align-self:center;
@@ -276,7 +284,7 @@
   .lp-nav { padding:14px 22px; }
   .lp-features,.lp-guide { padding:72px 22px; }
   .lp-footer { padding:22px; flex-direction:column; text-align:center; }
-  .lp-hero-stats { gap:0; padding:16px 0; }
-  .lp-stat { padding:0 20px; }
-  .lp-stat-divider { display:none; }
+  .lp-trust-strip { padding:12px 16px; gap:12px; }
+  .lp-trust-label { border-right:none; padding-right:0; }
+  .lp-trust-dot { display:none; }
 }

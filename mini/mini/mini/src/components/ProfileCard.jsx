@@ -1,7 +1,15 @@
+// ─────────────────────────────────────────────
+//  components/ProfileCard.jsx
+//  Shows connect/chat/pending state correctly
+// ─────────────────────────────────────────────
+
 import { AVATAR_COLORS } from "../data/mockData";
 
 export default function ProfileCard({ profile, isConnected, onConnect, onSkip, sessionExpired }) {
-  const avatarColor = AVATAR_COLORS[profile.id.charCodeAt(1) % AVATAR_COLORS.length];
+  const avatarColor = AVATAR_COLORS[profile.id.toString().charCodeAt(1) % AVATAR_COLORS.length];
+  const safeMatchScore = Number.isFinite(profile.matchScore)
+    ? Math.max(0, Math.min(100, Math.round(profile.matchScore)))
+    : 0;
 
   function getMatchColor(score) {
     if (score >= 60) return "#10B981";
@@ -30,12 +38,12 @@ export default function ProfileCard({ profile, isConnected, onConnect, onSkip, s
         <div>
           <p className="card-name">{profile.name}</p>
           <p style={{
-            color:      getMatchColor(profile.matchScore),
+            color:      getMatchColor(safeMatchScore),
             fontWeight: 600,
             fontSize:   13,
             margin:     "2px 0 0 0",
           }}>
-            {profile.matchScore}% match
+            {safeMatchScore}% match
           </p>
         </div>
       </div>

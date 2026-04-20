@@ -25,9 +25,10 @@ function NetworkMesh3D() {
     }
 
     function buildNodes() {
-      nodes = Array.from({ length: NODE_COUNT }, (_, i) => {
+      // FIX: removed unused `_` and `i` parameters from Array.from callback
+      nodes = Array.from({ length: NODE_COUNT }, () => {
         const layer = Math.floor(Math.random() * DEPTH_LAYERS);
-        const depth = 0.3 + (layer / (DEPTH_LAYERS - 1)) * 0.7; // 0.3 → 1.0
+        const depth = 0.3 + (layer / (DEPTH_LAYERS - 1)) * 0.7;
         return {
           x: Math.random() * width,
           y: Math.random() * height,
@@ -36,7 +37,6 @@ function NetworkMesh3D() {
           vy: (Math.random() - 0.5) * 0.4 * depth,
           r: 1.5 + depth * 2.5,
           pulsePhase: Math.random() * Math.PI * 2,
-          // 3D orbit params
           orbitAngle: Math.random() * Math.PI * 2,
           orbitSpeed: (Math.random() - 0.5) * 0.004 * depth,
           orbitRadius: 20 + Math.random() * 40,
@@ -47,8 +47,8 @@ function NetworkMesh3D() {
       });
     }
 
-    function project(node, t) {
-      // Gentle tilt based on mouse + time
+    // FIX: removed unused `t` parameter from project()
+    function project(node) {
       const tiltX = (mouse.x / width - 0.5) * 0.4;
       const tiltY = (mouse.y / height - 0.5) * 0.4;
 
@@ -65,7 +65,6 @@ function NetworkMesh3D() {
     function draw(t) {
       ctx.clearRect(0, 0, width, height);
 
-      // Update center drift
       nodes.forEach(n => {
         n.cx += n.vx;
         n.cy += n.vy;
@@ -73,13 +72,11 @@ function NetworkMesh3D() {
         if (n.cy < 0 || n.cy > height) n.vy *= -1;
       });
 
-      // Compute projected positions
-      const projected = nodes.map(n => ({ node: n, ...project(n, t) }));
+      // FIX: project() no longer needs `t` argument
+      const projected = nodes.map(n => ({ node: n, ...project(n) }));
 
-      // Sort back→front for painter's algorithm
       projected.sort((a, b) => a.node.z - b.node.z);
 
-      // Draw edges
       for (let i = 0; i < projected.length; i++) {
         for (let j = i + 1; j < projected.length; j++) {
           const a = projected[i];
@@ -93,11 +90,9 @@ function NetworkMesh3D() {
           if (dist < scaledMax) {
             const alpha = (1 - dist / scaledMax) * avgZ * 0.55;
             const pulse = 0.6 + 0.4 * Math.sin(t * 0.001 + a.node.pulsePhase);
-
-            // Color: purple → teal gradient based on depth
-            const r = Math.round(120 + avgZ * 80);
-            const g = Math.round(80 + avgZ * 80);
-            const bv = Math.round(20 + avgZ * 20);
+            const r  = Math.round(120 + avgZ * 80);
+            const g  = Math.round(80  + avgZ * 80);
+            const bv = Math.round(20  + avgZ * 20);
 
             ctx.beginPath();
             ctx.moveTo(a.px, a.py);
@@ -109,13 +104,11 @@ function NetworkMesh3D() {
         }
       }
 
-      // Draw nodes
       projected.forEach(({ node: n, px, py }) => {
         const pulse = 0.7 + 0.3 * Math.sin(t * 0.002 + n.pulsePhase);
         const baseR = n.r * pulse;
 
         if (n.active) {
-          // Outer glow ring
           const grad = ctx.createRadialGradient(px, py, 0, px, py, baseR * 4);
           grad.addColorStop(0, `rgba(196,160,80,${0.2 * n.z})`);
           grad.addColorStop(1, "rgba(196,160,80,0)");
@@ -125,12 +118,11 @@ function NetworkMesh3D() {
           ctx.fill();
         }
 
-        // Core dot
         const coreGrad = ctx.createRadialGradient(px, py, 0, px, py, baseR);
         if (n.active) {
-          coreGrad.addColorStop(0, `rgba(237,216,152,${n.z})`);
+          coreGrad.addColorStop(0,   `rgba(237,216,152,${n.z})`);
           coreGrad.addColorStop(0.5, `rgba(196,160,80,${n.z * 0.9})`);
-          coreGrad.addColorStop(1, `rgba(120,90,20,0)`);
+          coreGrad.addColorStop(1,   `rgba(120,90,20,0)`);
         } else {
           coreGrad.addColorStop(0, `rgba(200,185,140,${n.z * 0.7})`);
           coreGrad.addColorStop(1, `rgba(140,110,50,0)`);
@@ -284,20 +276,33 @@ export default function LandingPage({ onGoToLogin, onGoToRegister }) {
             </button>
           </div>
 
-          <div className="lp-hero-stats">
-            <div className="lp-stat">
-              <span className="lp-stat-num">10k+</span>
-              <span className="lp-stat-label">Connections Made</span>
-            </div>
-            <div className="lp-stat-divider" />
-            <div className="lp-stat">
-              <span className="lp-stat-num">500+</span>
-              <span className="lp-stat-label">Events Hosted</span>
-            </div>
-            <div className="lp-stat-divider" />
-            <div className="lp-stat">
-              <span className="lp-stat-num">98%</span>
-              <span className="lp-stat-label">Match Satisfaction</span>
+          <div className="lp-trust-strip">
+            <span className="lp-trust-label">Built for</span>
+            <div className="lp-trust-items">
+              <span className="lp-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                Conferences
+              </span>
+              <span className="lp-trust-dot" />
+              <span className="lp-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Hackathons
+              </span>
+              <span className="lp-trust-dot" />
+              <span className="lp-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Summits
+              </span>
+              <span className="lp-trust-dot" />
+              <span className="lp-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                Meetups
+              </span>
+              <span className="lp-trust-dot" />
+              <span className="lp-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                Campus Events
+              </span>
             </div>
           </div>
         </div>
@@ -308,17 +313,17 @@ export default function LandingPage({ onGoToLogin, onGoToRegister }) {
         <p className="lp-section-label">WHY NETMESH</p>
         <h2 className="lp-section-title">Everything you need to network smarter</h2>
         <div className="lp-cards">
-          <Card3D accent="purple" icon="⚡" title="Real-Time Matching"
+          <Card3D accent="purple" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>} title="Real-Time Matching"
             body="Session engine instantly surfaces attendees who match your professional goals and interests." />
-          <Card3D accent="teal" icon="💬" title="Live Chat"
+          <Card3D accent="teal" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} title="Live Chat"
             body="Start meaningful conversations right inside the platform. No card swapping, no follow-up hassle." />
-          <Card3D accent="blue" icon="🔔" title="Smart Notifications"
+          <Card3D accent="blue" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>} title="Smart Notifications"
             body="Get alerted when someone with complementary skills joins your session so you never miss a connection." />
-          <Card3D accent="purple" icon="🔒" title="Private Sessions"
+          <Card3D accent="purple" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>} title="Private Sessions"
             body="Each networking session is scoped and time-bound. Share only what you want, when you want." />
-          <Card3D accent="teal" icon="🌐" title="Any Event, Any Scale"
+          <Card3D accent="teal" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>} title="Any Event, Any Scale"
             body="From intimate meetups to large conferences, NetMesh scales to every room size effortlessly." />
-          <Card3D accent="blue" icon="📊" title="Interest Graph"
+          <Card3D accent="blue" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} title="Interest Graph"
             body="Your profile builds a live interest graph that gets smarter with every session you join." />
         </div>
       </section>
@@ -449,7 +454,7 @@ export default function LandingPage({ onGoToLogin, onGoToRegister }) {
             </div>
             <div className="lp-step-visual lp-step-visual--chat">
               <div className="mock-chat">
-                <div className="mock-bubble mock-bubble--in">Hey! I saw you work in ML too 👋</div>
+                <div className="mock-bubble mock-bubble--in">Hey! I saw you work in ML too — let's connect.</div>
                 <div className="mock-bubble mock-bubble--out">Yes! Let's connect.</div>
               </div>
             </div>

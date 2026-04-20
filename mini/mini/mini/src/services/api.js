@@ -59,10 +59,10 @@ const api = {
     });
   },
 
-  async joinSession(sessionId) {
+  async joinSession(sessionId, requirement, sessionInterests) {
     const result = await authFetch(`${BASE_URL}/session/join`, {
       method: "POST",
-      body: JSON.stringify({ sessionId }),
+      body: JSON.stringify({ sessionId, requirement, sessionInterests }),
     });
     if (result.success) {
       return { success: true, sessionId: result.sessionId, expiresAt: result.expiresAt };
@@ -70,7 +70,18 @@ const api = {
     return { success: false, error: result.message };
   },
 
-  // requirement is now sent to backend
+  async leaveSession(sessionId) {
+    try {
+      return await authFetch(`${BASE_URL}/chat/leave`, {
+        method: "POST",
+        body: JSON.stringify({ sessionId }),
+      });
+    } catch (err) {
+      console.warn("[leaveSession] failed:", err.message);
+      return { success: false };
+    }
+  },
+
   async getRecommendations(userInterests, alreadySeenIds, sessionId, requirement) {
     const interestsParam   = userInterests.join(",");
     const excludeParam     = alreadySeenIds.join(",");
@@ -78,6 +89,30 @@ const api = {
     const url = `${BASE_URL}/recommend?sessionId=${sessionId}&interests=${interestsParam}&exclude=${excludeParam}&requirement=${requirementParam}`;
     const result = await authFetch(url);
     return result.recommendations || [];
+  },
+
+  async getConnections(sessionId) {
+    try {
+      const token = getToken();
+      const response = await fetch(
+        `${BASE_URL}/chat/connections?sessionId=${encodeURIComponent(sessionId)}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const text = await response.text();
+      if (!text || text.trimStart().startsWith("<")) {
+        console.warn("[getConnections] non-JSON response — skipping connection restore");
+        return { success: false, connections: [] };
+      }
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn("[getConnections] failed — skipping connection restore:", err.message);
+      return { success: false, connections: [] };
+    }
   },
 
   async connectWithUser(sessionId, targetUserId) {

@@ -1,38 +1,73 @@
 import { useState, useEffect, useRef } from "react";
 import Header from "../components/header";
 import ProfileCard from "../components/ProfileCard";
-import ConnectionsList from "../components/ConnectionsList";
-import ChatBox from "../components/ChatBox";
+import ChatSidebar from "../components/ChatSidebar";
+import ChatWindow from "../components/ChatWindow";
 import api from "../services/api";
 
 export default function DashboardPage({ expiresAt, currentUser, sessionId, requirement, sessionInterests, onLeaveSession, onLogout }) {
   const [recommendations, setRecommendations] = useState([]);
   const [connections, setConnections]         = useState([]);
   const [seenIds, setSeenIds]                 = useState([]);
-  const [activeChatUser, setActiveChatUser]   = useState(null);
+  const [openChats, setOpenChats]             = useState([]);
+  const [pendingSent, setPendingSent]         = useState([]);
   const [allMessages, setAllMessages]         = useState({});
   const [loading, setLoading]                 = useState(true);
   const [error, setError]                     = useState("");
   const [notifications, setNotifications]     = useState([]);
   const [toastNotification, setToastNotification] = useState(null);
   const [selectedNotification, setSelectedNotification] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(() => { if (expiresAt) { const secs = Math.floor((new Date(expiresAt) - new Date()) / 1000); return Math.max(0, secs); } return 300; });
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (expiresAt) {
+      const secs = Math.floor((new Date(expiresAt) - new Date()) / 1000);
+      return Math.max(0, secs);
+    }
+    return 300;
+  });
   const [sessionExpired, setSessionExpired]   = useState(false);
   const hasLoadedNotifications = useRef(false);
   const previousNotificationIds = useRef(new Set());
   const notificationClickHandlerRef = useRef(null);
+  const expiredHandled = useRef(false);
 
+  // ─── On mount: restore connections + load recommendations ───
   useEffect(() => {
     async function loadInitial() {
+      hasLoadedNotifications.current = false;
+      previousNotificationIds.current = new Set();
+      setNotifications([]);
+      setToastNotification(null);
+      setSelectedNotification(null);
+
       setLoading(true);
-      console.log("📌 Loading recs for sessionId:", sessionId);
-      const result = await api.getRecommendations(sessionInterests, [], sessionId, requirement);
+
+      let restoredConnections = [];
+      try {
+        const connResult = await api.getConnections(sessionId);
+        if (connResult.success && connResult.connections?.length > 0) {
+          restoredConnections = connResult.connections;
+          const restoredIds = restoredConnections.map((c) => c.id.toString());
+          setConnections(restoredConnections);
+          setSeenIds(restoredIds);
+          setAllMessages((prev) => {
+            const next = { ...prev };
+            restoredIds.forEach((id) => { if (!next[id]) next[id] = []; });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.warn("[loadInitial] getConnections failed:", err.message);
+      }
+
+      const excludeIds = restoredConnections.map((c) => c.id.toString());
+      const result = await api.getRecommendations(sessionInterests, excludeIds, sessionId, requirement);
       setRecommendations(result);
       setLoading(false);
     }
     loadInitial();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Poll for new recommendations ───
   useEffect(() => {
     if (sessionExpired) return;
 
@@ -42,14 +77,7 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
         ...recommendations.map((profile) => profile.id),
         ...connections.map((connection) => connection.id),
       ];
-
-      const freshProfiles = await api.getRecommendations(
-        sessionInterests,
-        allExcluded,
-        sessionId,
-        requirement
-      );
-
+      const freshProfiles = await api.getRecommendations(sessionInterests, allExcluded, sessionId, requirement);
       if (freshProfiles.length > 0) {
         setRecommendations((prev) => [...prev, ...freshProfiles].slice(0, 5));
       }
@@ -58,15 +86,12 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
     return () => clearInterval(pollRecommendations);
   }, [connections, recommendations, requirement, seenIds, sessionExpired, sessionId, sessionInterests]);
 
+  // ─── Session countdown ───
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setSessionExpired(true);
-          setConnections([]);
-          setAllMessages({});
-          setActiveChatUser(null);
           return 0;
         }
         return prev - 1;
@@ -75,20 +100,31 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
     return () => clearInterval(timer);
   }, []);
 
+  // ─── Handle session expiry ───
+  useEffect(() => {
+    if (timeLeft > 0) return;
+    if (expiredHandled.current) return;
+    expiredHandled.current = true;
+
+    const timeout = setTimeout(() => {
+      setSessionExpired(true);
+      setConnections([]);
+      setAllMessages({});
+      setOpenChats([]);
+      setPendingSent([]);
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [timeLeft]);
+
+  // ─── Browser notification permission ───
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
   }, []);
 
-  useEffect(() => {
-    setNotifications([]);
-    setToastNotification(null);
-    setSelectedNotification(null);
-    hasLoadedNotifications.current = false;
-    previousNotificationIds.current = new Set();
-  }, [sessionId]);
-
+  // ─── Poll notifications ───
   useEffect(() => {
     const loadNotifications = async () => {
       const result = await api.getNotifications(sessionId);
@@ -127,33 +163,57 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
     return () => clearInterval(poll);
   }, [sessionId]);
 
+  // ─── Toast auto-dismiss ───
   useEffect(() => {
     if (!toastNotification) return;
     const timer = setTimeout(() => setToastNotification(null), 4000);
     return () => clearTimeout(timer);
   }, [toastNotification]);
 
-  // Poll messages every 3 seconds when a chat is open
+  // ─── Poll messages for all open chats ───
   useEffect(() => {
-    if (!activeChatUser) return;
-    const loadMessages = async () => {
-      const result = await api.getMessages(sessionId, activeChatUser.id);
-      if (result.messages) {
-        setAllMessages(prev => ({
-          ...prev,
-          [activeChatUser.id]: result.messages
-        }));
+    if (openChats.length === 0) return;
+
+    const loadAllMessages = async () => {
+      for (const chatUser of openChats) {
+        const result = await api.getMessages(sessionId, chatUser.id);
+        if (result.messages) {
+          setAllMessages((prev) => ({ ...prev, [chatUser.id]: result.messages }));
+        }
       }
     };
-    loadMessages();
-    const poll = setInterval(loadMessages, 3000);
+
+    loadAllMessages();
+    const poll = setInterval(loadAllMessages, 3000);
     return () => clearInterval(poll);
-  }, [activeChatUser, sessionId]);
+  }, [openChats, sessionId]);
+
+  function openChat(profile) {
+    setOpenChats((prev) => {
+      if (prev.some((c) => c.id === profile.id)) {
+        return [...prev.filter((c) => c.id !== profile.id), profile];
+      }
+      return [...prev, profile].slice(-3);
+    });
+  }
+
+  function closeChat(profileId) {
+    setOpenChats((prev) => prev.filter((c) => c.id !== profileId));
+  }
+
+  async function handleLeaveSession() {
+    try {
+      await api.leaveSession(sessionId);
+    } catch (err) {
+      console.warn("leaveSession error:", err.message);
+    }
+    onLeaveSession();
+  }
 
   async function handleConnect(profile, action) {
     if (action === "open-chat") {
       setError("");
-      setActiveChatUser(profile);
+      openChat(profile);
       return;
     }
     setError("");
@@ -162,13 +222,21 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
       setError(result.message || "Could not connect right now.");
       return;
     }
+
     const updatedSeen = seenIds.includes(profile.id) ? seenIds : [...seenIds, profile.id];
     setSeenIds(updatedSeen);
     const remaining = recommendations.filter((r) => r.id !== profile.id);
+
     if (result.status === "connected") {
       addConnectionProfile(profile);
+      await refillToFive(remaining, updatedSeen);
+    } else if (result.status === "pending") {
+      setPendingSent((prev) =>
+        prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
+      );
+      setRecommendations(remaining);
+      await refillToFive(remaining, updatedSeen);
     }
-    await refillToFive(remaining, updatedSeen);
   }
 
   async function handleSkip(profileId) {
@@ -192,17 +260,15 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
       setError(sendResult.message || "Message could not be sent.");
       return;
     }
-    // immediately fetch updated messages
     const result = await api.getMessages(sessionId, toUserId);
     if (result.messages) {
-      setAllMessages(prev => ({ ...prev, [toUserId]: result.messages }));
+      setAllMessages((prev) => ({ ...prev, [toUserId]: result.messages }));
     }
   }
 
   async function handleNotificationsOpen() {
     const unread = notifications.some((item) => !item.read);
     if (!unread) return;
-
     const result = await api.markNotificationsRead(sessionId);
     if (result.success) {
       setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
@@ -211,17 +277,17 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
 
   function addConnectionProfile(profile) {
     if (!profile?.id) return;
-
-    setConnections((prev) => (
+    setConnections((prev) =>
       prev.some((item) => item.id === profile.id) ? prev : [...prev, profile]
-    ));
-    setAllMessages((prev) => (
+    );
+    setAllMessages((prev) =>
       prev[profile.id] ? prev : { ...prev, [profile.id]: [] }
-    ));
-    setSeenIds((prev) => (
+    );
+    setSeenIds((prev) =>
       prev.includes(profile.id) ? prev : [...prev, profile.id]
-    ));
+    );
     setRecommendations((prev) => prev.filter((item) => item.id !== profile.id));
+    setPendingSent((prev) => prev.filter((item) => item.id !== profile.id));
   }
 
   async function handleNotificationClick(notification) {
@@ -239,18 +305,23 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
     }
 
     const profile = notification.senderProfile;
-    addConnectionProfile(profile);
-    setActiveChatUser(profile);
-    setToastNotification(null);
 
-    if (!notification.read) {
-      await handleNotificationsOpen();
+    try {
+      const connResult = await api.getConnections(sessionId);
+      if (connResult.success && connResult.connections?.length > 0) {
+        connResult.connections.forEach((c) => addConnectionProfile(c));
+      }
+    } catch {
+      addConnectionProfile(profile);
     }
+
+    openChat(profile);
+    setToastNotification(null);
+    if (!notification.read) await handleNotificationsOpen();
   }
 
   async function handleNotificationAction(action) {
     if (!selectedNotification?.id) return;
-
     setError("");
     const result = await api.respondToConnectionRequest(selectedNotification.id, action);
     if (!result.success) {
@@ -261,13 +332,13 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
     const profile = result.profile || selectedNotification.senderProfile;
     if (action === "accept" && profile) {
       addConnectionProfile(profile);
-      setActiveChatUser(profile);
+      openChat(profile);
     }
 
     setNotifications((prev) => prev.filter((item) => item.id !== selectedNotification.id));
-    setToastNotification((prev) => (
+    setToastNotification((prev) =>
       prev?.id === selectedNotification.id ? null : prev
-    ));
+    );
     setSelectedNotification(null);
   }
 
@@ -291,71 +362,105 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
           <p className="toast-notification__message">{toastNotification.message}</p>
         </button>
       )}
+
       {selectedNotification && (
         <div className="notification-modal-backdrop" onClick={() => setSelectedNotification(null)}>
-          <div
-            className="notification-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="notification-modal" onClick={(e) => e.stopPropagation()}>
             <p className="notification-modal__eyebrow">Connection Request</p>
             <h2 className="notification-modal__title">
               {selectedNotification.senderProfile?.name || "This user"} wants to connect
             </h2>
             <p className="notification-modal__message">{selectedNotification.message}</p>
             <div className="notification-modal__actions">
-              <button className="btn btn-connect" onClick={() => handleNotificationAction("accept")}>
-                Accept
-              </button>
-              <button className="btn btn-skip" onClick={() => handleNotificationAction("reject")}>
-                Reject
-              </button>
-              <button className="btn btn-block" onClick={() => handleNotificationAction("block")}>
-                Block
-              </button>
+              <button className="btn btn-connect" onClick={() => handleNotificationAction("accept")}>Accept</button>
+              <button className="btn btn-skip"    onClick={() => handleNotificationAction("reject")}>Reject</button>
+              <button className="btn btn-block"   onClick={() => handleNotificationAction("block")}>Block</button>
             </div>
           </div>
         </div>
       )}
+
       <Header
         currentUser={currentUser}
         sessionId={sessionId}
-        onLeaveSession={onLeaveSession}
+        onLeaveSession={handleLeaveSession}
         onLogout={onLogout}
         notifications={notifications}
         unreadCount={unreadCount}
         onNotificationsOpen={handleNotificationsOpen}
         onNotificationClick={handleNotificationClick}
       />
-      {sessionExpired && <div className="expired-banner">⚠ Session has ended — All connections and chats have been cleared</div>}
-      <main className="dashboard-main">
-        <div className="dashboard-title-row">
-          <div>
-            <h1 className="dashboard-title">Recommended for You</h1>
-            <p className="dashboard-subtitle">Based on your interests · Goal: <span className="goal-highlight">{requirement}</span></p>
-          </div>
-          <div className={`timer-box ${sessionExpired ? "timer-box--expired" : ""}`}>
-            <p className="timer-label">Session ends in</p>
-            <p className={`timer-value ${sessionExpired ? "timer-value--expired" : ""}`}>{sessionExpired ? "EXPIRED" : `${minutes}:${seconds}`}</p>
-          </div>
-        </div>
-        {error && <p className="error-text">{error}</p>}
-        <ConnectionsList connections={connections} onOpenChat={setActiveChatUser} sessionExpired={sessionExpired} />
-        {loading ? (
-          <div className="cards-grid">{[1,2,3,4,5].map((i) => <div key={i} className="skeleton-card" />)}</div>
-        ) : (
-          <div className="cards-grid">
-            {recommendations.map((profile) => (
-              <ProfileCard key={profile.id} profile={profile} isConnected={connections.some((c) => c.id === profile.id)} onConnect={handleConnect} onSkip={handleSkip} sessionExpired={sessionExpired} />
-            ))}
-          </div>
-        )}
-        {!loading && recommendations.length === 0 && (
-          <div className="empty-state"><span className="empty-icon">🎉</span><p>You have seen all available profiles in this session!</p></div>
-        )}
-      </main>
-      {activeChatUser && (
-        <ChatBox chatUser={activeChatUser} messages={allMessages[activeChatUser.id] || []} onSend={handleSendMessage} onClose={() => setActiveChatUser(null)} sessionExpired={sessionExpired} />
+
+      {sessionExpired && (
+        <div className="expired-banner">⚠ Session has ended — All connections and chats have been cleared</div>
       )}
+
+      <div className="dashboard-layout">
+        <main className="dashboard-main">
+          <div className="dashboard-title-row">
+            <div>
+              <h1 className="dashboard-title">Recommended for You</h1>
+              <p className="dashboard-subtitle">
+                Based on your interests · Goal: <span className="goal-highlight">{requirement}</span>
+              </p>
+            </div>
+            <div className={`timer-box ${sessionExpired ? "timer-box--expired" : ""}`}>
+              <p className="timer-label">Session ends in</p>
+              <p className={`timer-value ${sessionExpired ? "timer-value--expired" : ""}`}>
+                {sessionExpired ? "EXPIRED" : `${minutes}:${seconds}`}
+              </p>
+            </div>
+          </div>
+
+          {error && <p className="error-text">{error}</p>}
+
+          {loading ? (
+            <div className="cards-grid">
+              {[1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton-card" />)}
+            </div>
+          ) : (
+            <div className="cards-grid">
+              {recommendations.map((profile) => (
+                <ProfileCard
+                  key={profile.id}
+                  profile={profile}
+                  isConnected={connections.some((c) => c.id === profile.id)}
+                  onConnect={handleConnect}
+                  onSkip={handleSkip}
+                  sessionExpired={sessionExpired}
+                />
+              ))}
+            </div>
+          )}
+
+          {!loading && recommendations.length === 0 && (
+            <div className="empty-state">
+              <span className="empty-icon">🎉</span>
+              <p>You have seen all available profiles in this session!</p>
+            </div>
+          )}
+        </main>
+
+        <ChatSidebar
+          connections={connections}
+          pendingSent={pendingSent}
+          openChats={openChats}
+          onOpenChat={openChat}
+          sessionExpired={sessionExpired}
+        />
+      </div>
+
+      {openChats.map((chatUser, index) => (
+        <ChatWindow
+          key={chatUser.id}
+          chatUser={chatUser}
+          messages={allMessages[chatUser.id] || []}
+          onSend={handleSendMessage}
+          onClose={() => closeChat(chatUser.id)}
+          sessionExpired={sessionExpired}
+          stackIndex={index}
+        />
+      ))}
     </div>
   );
 }

@@ -52,7 +52,7 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
     if (!requirement)      return setError("Please select what you are looking for.");
     setLoading(true);
     setError("");
-    const result = await api.joinSession(sessionId);
+    const result = await api.joinSession(sessionId, requirement, sessionInterests);
     setLoading(false);
     if (result.success) {
       onJoinSuccess(result.sessionId, requirement, sessionInterests, result.expiresAt);
