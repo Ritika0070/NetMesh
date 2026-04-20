@@ -1,26 +1,14 @@
-// ─────────────────────────────────────────────
-//  components/ChatSidebar.jsx
-//  LinkedIn-style right sidebar.
-//  Shows:
-//    • Connected people  → click to open chat
-//    • Pending sent      → shows "awaiting" badge, chat locked until accepted
-// ─────────────────────────────────────────────
-
 import { AVATAR_COLORS } from "../data/mockData";
 
-export default function ChatSidebar({ connections, pendingSent = [], openChats, onOpenChat, sessionExpired }) {
-  // FIX: filter out any undefined/null entries before rendering
-  const safeConnections = connections.filter((p) => p && p.id != null);
-  const safePending     = pendingSent.filter((p) => p && p.id != null);
-
-  const hasAny = safeConnections.length > 0 || safePending.length > 0;
+export default function ChatSidebar({ connections = [], pendingSent = [], openChats = [], onOpenChat, sessionExpired }) {
+  const hasAny = connections.length > 0 || pendingSent.length > 0;
 
   return (
     <aside className="chat-sidebar">
       <div className="chat-sidebar__header">
-        <span className="chat-sidebar__title">Your Connections</span>
-        {safeConnections.length > 0 && (
-          <span className="chat-sidebar__count">{safeConnections.length}</span>
+        <span className="chat-sidebar__title">Messaging</span>
+        {connections.length > 0 && (
+          <span className="chat-sidebar__count">{connections.length}</span>
         )}
       </div>
 
@@ -31,13 +19,12 @@ export default function ChatSidebar({ connections, pendingSent = [], openChats, 
           </p>
         ) : (
           <>
-            {/* ── Connected ── */}
-            {safeConnections.length > 0 && (
+            {connections.length > 0 && (
               <>
                 <p className="chat-sidebar__section-label">Connected</p>
-                {safeConnections.map((person) => {
-                  const color  = AVATAR_COLORS[person.id.toString().charCodeAt(1) % AVATAR_COLORS.length];
-                  const isOpen = openChats.some((c) => c && c.id === person.id);
+                {connections.map((person) => {
+                  const color = AVATAR_COLORS[person.id.toString().charCodeAt(1) % AVATAR_COLORS.length];
+                  const isOpen = openChats.some((c) => c.id === person.id);
                   return (
                     <button
                       key={person.id}
@@ -60,13 +47,12 @@ export default function ChatSidebar({ connections, pendingSent = [], openChats, 
               </>
             )}
 
-            {/* ── Pending sent ── */}
-            {safePending.length > 0 && (
+            {pendingSent.length > 0 && (
               <>
                 <p className="chat-sidebar__section-label chat-sidebar__section-label--pending">
                   Awaiting Response
                 </p>
-                {safePending.map((person) => {
+                {pendingSent.map((person) => {
                   const color = AVATAR_COLORS[person.id.toString().charCodeAt(1) % AVATAR_COLORS.length];
                   return (
                     <div
@@ -83,7 +69,7 @@ export default function ChatSidebar({ connections, pendingSent = [], openChats, 
                       <span className="chat-sidebar__name chat-sidebar__name--pending">
                         {person.name}
                       </span>
-                      <span className="chat-sidebar__pending-badge">Pending</span>
+                      <span className="chat-sidebar__pending-badge">⏳</span>
                     </div>
                   );
                 })}

@@ -391,9 +391,12 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
         onNotificationClick={handleNotificationClick}
       />
 
-      {sessionExpired && (
-        <div className="expired-banner">⚠ Session has ended — All connections and chats have been cleared</div>
-      )}
+   {sessionExpired && (
+  <div className="expired-banner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'8px',verticalAlign:'middle',opacity:0.7}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Session has ended — All connections and chats have been cleared
+  </div>
+)}
 
       <div className="dashboard-layout">
         <main className="dashboard-main">
@@ -432,13 +435,28 @@ export default function DashboardPage({ expiresAt, currentUser, sessionId, requi
               ))}
             </div>
           )}
-
-          {!loading && recommendations.length === 0 && (
-            <div className="empty-state">
-              <span className="empty-icon">🎉</span>
-              <p>You have seen all available profiles in this session!</p>
-            </div>
-          )}
+{!loading && recommendations.length === 0 && (
+  <div className="empty-state">
+    {/* Creative: all nodes connected — mesh complete illustration */}
+    <svg width="64" height="48" viewBox="0 0 64 48" fill="none" style={{display:'block',margin:'0 auto 20px',opacity:0.5}}>
+      <circle cx="32" cy="8"  r="4" fill="#C4A050"/>
+      <circle cx="10" cy="38" r="4" fill="#C4A050"/>
+      <circle cx="54" cy="38" r="4" fill="#C4A050"/>
+      <circle cx="32" cy="28" r="3" fill="#DDB96A" fillOpacity="0.6"/>
+      <line x1="32" y1="12" x2="32" y2="25"  stroke="#C4A050" strokeWidth="1.2" strokeOpacity="0.5"/>
+      <line x1="32" y1="12" x2="10"  y2="34"  stroke="#C4A050" strokeWidth="1.2" strokeOpacity="0.4"/>
+      <line x1="32" y1="12" x2="54"  y2="34"  stroke="#C4A050" strokeWidth="1.2" strokeOpacity="0.4"/>
+      <line x1="13"  y1="38" x2="29" y2="28"  stroke="#C4A050" strokeWidth="1"   strokeOpacity="0.3"/>
+      <line x1="51"  y1="38" x2="35" y2="28"  stroke="#C4A050" strokeWidth="1"   strokeOpacity="0.3"/>
+      <line x1="14"  y1="40" x2="50" y2="40"  stroke="#C4A050" strokeWidth="1"   strokeOpacity="0.2"/>
+      {/* pulse ring on center node */}
+      <circle cx="32" cy="28" r="7" stroke="#C4A050" strokeWidth="0.8" strokeOpacity="0.2" strokeDasharray="2 3"/>
+    </svg>
+    <p style={{color:'#8A7A60',fontSize:'15px',letterSpacing:'0.04em'}}>
+      Your mesh is complete — you've seen everyone in this session.
+    </p>
+  </div>
+)}
         </main>
 
         <ChatSidebar

@@ -13,12 +13,10 @@ export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
   const [bio, setBio]             = useState("");
-  const [interests, setInterests] = useState([]); // selected interest chips
+  const [interests, setInterests] = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-
-  // Toggle an interest chip on/off
   function toggleInterest(interest) {
     setInterests((prev) =>
       prev.includes(interest)
@@ -28,20 +26,15 @@ export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
   }
 
   async function handleSubmit() {
-    // Basic validation
     if (!name.trim())         return setError("Please enter your name.");
     if (!email.includes("@")) return setError("Please enter a valid email.");
     if (password.length < 6)  return setError("Password must be at least 6 characters.");
     if (!bio.trim())          return setError("Please write a short bio.");
     if (interests.length < 2) return setError("Please select at least 2 interests.");
-
     setLoading(true);
     setError("");
-
     const result = await api.register(name, email, password, interests, bio);
-
     setLoading(false);
-
     if (result.success) {
       onRegisterSuccess(result.user);
     } else {
@@ -55,7 +48,17 @@ export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
 
         {/* Header */}
         <div className="form-header">
-          <div className="form-icon">⚡</div>
+          {/* Creative icon: a person joining a mesh — two nodes connecting to a center */}
+          <div className="form-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="10" r="4" stroke="#C4A050" strokeWidth="1.4"/>
+              <path d="M8 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#C4A050" strokeWidth="1.4" strokeLinecap="round"/>
+              <circle cx="27" cy="10" r="2.5" stroke="#DDB96A" strokeWidth="1.2" strokeOpacity="0.7"/>
+              <line x1="24.5" y1="10" x2="20" y2="10" stroke="#DDB96A" strokeWidth="1" strokeOpacity="0.5" strokeDasharray="2 2"/>
+              <circle cx="5"  cy="10" r="2.5" stroke="#DDB96A" strokeWidth="1.2" strokeOpacity="0.7"/>
+              <line x1="7.5"  y1="10" x2="12" y2="10" stroke="#DDB96A" strokeWidth="1" strokeOpacity="0.5" strokeDasharray="2 2"/>
+            </svg>
+          </div>
           <h2 className="form-title">Create Account</h2>
           <p className="form-subtitle">Join the event network</p>
         </div>
@@ -107,7 +110,7 @@ export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
           />
         </div>
 
-        {/* Interests — multi-select chips */}
+        {/* Interests */}
         <div className="field">
           <label className="field-label">
             Your Interests
@@ -126,19 +129,12 @@ export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
           </div>
         </div>
 
-        {/* Error message */}
         {error && <p className="error-text">{error}</p>}
 
-        {/* Submit */}
-        <button
-          className="big-btn"
-          onClick={handleSubmit}
-          disabled={loading}
-        >
+        <button className="big-btn" onClick={handleSubmit} disabled={loading}>
           {loading ? "Creating account..." : "Create Account →"}
         </button>
 
-        {/* Switch to login */}
         <p className="switch-text">
           Already have an account?{" "}
           <span className="switch-link" onClick={onGoToLogin}>Log in</span>
