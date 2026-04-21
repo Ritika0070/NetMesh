@@ -1,41 +1,36 @@
 import { useEffect, useState } from "react";
-import LandingPage from "./pages/LandingPage";
-import RegisterPage from "./pages/RegisterPage";
-import LoginPage from "./pages/LoginPage";
+import LandingPage     from "./pages/LandingPage";
+import RegisterPage    from "./pages/RegisterPage";
+import LoginPage       from "./pages/LoginPage";
 import JoinSessionPage from "./pages/JoinSessionPage";
-import DashboardPage from "./pages/DashboardPage";
+import DashboardPage   from "./pages/DashboardPage";
+import HomePage        from "./pages/HomePage";
 import "./App.css";
 
 const PAGE_PATHS = {
-  landing: "/",
-  register: "/register",
-  login: "/login",
+  landing:        "/",
+  home:           "/home",
+  register:       "/register",
+  login:          "/login",
   "join-session": "/join-session",
-  dashboard: "/dashboard",
+  dashboard:      "/dashboard",
 };
 
 function getDefaultPage(savedUser, savedSession) {
   if (savedUser && savedSession) return "dashboard";
-  if (savedUser) return "join-session";
+  if (savedUser) return "home";
   return "landing";
 }
 
 function getPageFromPath(pathname, savedUser, savedSession) {
   switch (pathname) {
-    case "/":
-      return "landing";
-    case "/register":
-      return savedUser ? getDefaultPage(savedUser, savedSession) : "register";
-    case "/login":
-      return savedUser ? getDefaultPage(savedUser, savedSession) : "login";
-    case "/join-session":
-      return savedUser ? "join-session" : "landing";
-    case "/dashboard":
-      return savedUser && savedSession
-        ? "dashboard"
-        : getDefaultPage(savedUser, savedSession);
-    default:
-      return getDefaultPage(savedUser, savedSession);
+    case "/":             return "landing";
+    case "/home":         return savedUser ? "home" : "landing";
+    case "/register":     return savedUser ? getDefaultPage(savedUser, savedSession) : "register";
+    case "/login":        return savedUser ? getDefaultPage(savedUser, savedSession) : "login";
+    case "/join-session": return savedUser ? "join-session" : "landing";
+    case "/dashboard":    return savedUser && savedSession ? "dashboard" : getDefaultPage(savedUser, savedSession);
+    default:              return getDefaultPage(savedUser, savedSession);
   }
 }
 
@@ -45,7 +40,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [page, setPage] = useState(() => {
-    const savedUser = localStorage.getItem("user");
+    const savedUser    = localStorage.getItem("user");
     const savedSession = localStorage.getItem("sessionInfo");
     return getPageFromPath(window.location.pathname, savedUser, savedSession);
   });
@@ -55,13 +50,10 @@ export default function App() {
   });
 
   function goToPage(nextPage, { replace = false } = {}) {
-    const nextPath = PAGE_PATHS[nextPage] || "/";
+    const nextPath    = PAGE_PATHS[nextPage] || "/";
     const currentPath = window.location.pathname;
-
     setPage(nextPage);
-
     if (currentPath === nextPath) return;
-
     const historyMethod = replace ? "replaceState" : "pushState";
     window.history[historyMethod]({ page: nextPage }, "", nextPath);
   }
@@ -76,11 +68,10 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      const savedUser = localStorage.getItem("user");
+      const savedUser    = localStorage.getItem("user");
       const savedSession = localStorage.getItem("sessionInfo");
       setPage(getPageFromPath(window.location.pathname, savedUser, savedSession));
     };
-
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -94,12 +85,12 @@ export default function App() {
 
   function handleRegisterSuccess(user) {
     setCurrentUser(user);
-    goToPage("join-session");
+    goToPage("home");
   }
 
   function handleLoginSuccess(user) {
     setCurrentUser(user);
-    goToPage("join-session");
+    goToPage("home");
   }
 
   function handleJoinSession(sid, requirement, sessionInterests, expiresAt) {
@@ -109,7 +100,7 @@ export default function App() {
 
   function handleLeaveSession() {
     setSessionInfo(null);
-    goToPage("join-session");
+    goToPage("home");
   }
 
   function handleLogout() {
@@ -121,12 +112,27 @@ export default function App() {
     goToPage("landing", { replace: true });
   }
 
+  function handleProfileUpdate(updatedUser) {
+    setCurrentUser(updatedUser);
+  }
+
   return (
     <>
       {page === "landing" && (
         <LandingPage
+          currentUser={currentUser}
           onGoToLogin={() => goToPage("login")}
           onGoToRegister={() => goToPage("register")}
+          onGoToHome={() => goToPage("home")}
+        />
+      )}
+      {page === "home" && currentUser && (
+        <HomePage
+          currentUser={currentUser}
+          onGoToJoinSession={() => goToPage("join-session")}
+          onLogout={handleLogout}
+          onGoToDashboard={sessionInfo ? () => goToPage("dashboard") : null}
+          onProfileUpdate={handleProfileUpdate}
         />
       )}
       {page === "register" && (
@@ -145,7 +151,7 @@ export default function App() {
         <JoinSessionPage
           currentUser={currentUser}
           onJoinSuccess={handleJoinSession}
-          onLogout={handleLogout}
+          onBackToHome={() => goToPage("home")}
         />
       )}
       {page === "dashboard" && currentUser && sessionInfo && (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
+import { ALL_INTERESTS } from "../data/mockData";
 
 const DURATION_OPTIONS = [
   { label: "5 min",   value: 5    },
@@ -11,10 +12,9 @@ const DURATION_OPTIONS = [
   { label: "1 day",   value: 1440 },
 ];
 
-const ALL_INTERESTS    = ["AI","Startups","Music","Design","Web3","Climate","Health","Fintech","Education","Gaming","Robotics","Marketing"];
 const ALL_REQUIREMENTS = ["Networking","Job Opportunities","Collaboration","Mentorship","Investment","Co-founder Hunt"];
 
-export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }) {
+export default function JoinSessionPage({ currentUser, onJoinSuccess, onBackToHome }) {
   const [activeTab, setActiveTab]               = useState("join");
   const [sessionId, setSessionId]               = useState("");
   const [requirement, setRequirement]           = useState("");
@@ -24,6 +24,7 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
   const [durationMinutes, setDurationMinutes]   = useState(120);
   const [loading, setLoading]                   = useState(false);
   const [error, setError]                       = useState("");
+  const [copied, setCopied]                     = useState(false);
 
   function toggleInterest(interest) {
     setSessionInterests((prev) =>
@@ -57,34 +58,48 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
     if (result.success) {
       onJoinSuccess(result.sessionId, requirement, sessionInterests, result.expiresAt);
     } else {
-      setError(result.error);
+      setError(result.error || "Could not join session. Check the ID and try again.");
     }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(createdSessionId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   return (
     <div className="page-center">
       <div className="form-card" style={{ maxWidth: 560 }}>
 
-        {/* ── Top bar ── */}
-        <div style={{
-          display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginBottom: 28,
-        }}>
-          <div>
+        {/* ── Top bar with back button ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+          <button
+            onClick={onBackToHome}
+            style={{
+              background: "transparent", border: "1px solid var(--border)",
+              color: "var(--text-secondary)", borderRadius: 6,
+              padding: "7px 14px", cursor: "pointer",
+              fontSize: 12, fontWeight: 500,
+              display: "flex", alignItems: "center", gap: 6,
+              fontFamily: "'Jost', sans-serif", letterSpacing: "0.06em",
+              transition: "all 0.18s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(196,160,80,0.4)"; e.currentTarget.style.color = "var(--cream-muted)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Home
+          </button>
+          <div style={{ flex: 1 }}>
             <h2 className="form-title" style={{ margin: 0, fontSize: 22 }}>Join an Event</h2>
-            <p style={{ margin: "5px 0 0 0", color: "#9ca3af", fontSize: 14 }}>
+            <p style={{ margin: "3px 0 0 0", color: "#9ca3af", fontSize: 13 }}>
               Welcome, {currentUser.name}
             </p>
           </div>
-          <button onClick={onLogout} style={{
-            background: "transparent",
-            border: "1px solid rgba(239,68,68,0.45)",
-            color: "#ef4444", borderRadius: 8,
-            padding: "7px 16px", cursor: "pointer",
-            fontSize: 13, fontWeight: 600,
-          }}>
-            Logout
-          </button>
         </div>
 
         {/* ── Tabs ── */}
@@ -103,9 +118,7 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
           </button>
         </div>
 
-        {/* ════════════════════════════
-            CREATE TAB
-        ════════════════════════════ */}
+        {/* ── CREATE TAB ── */}
         {activeTab === "create" && (
           <div className="tab-content">
             <div className="field">
@@ -115,6 +128,7 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
                 placeholder="e.g. TechFest 2025, AI Summit"
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
+                autoFocus
               />
             </div>
 
@@ -133,28 +147,53 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
               </div>
             </div>
 
-            {error && <p className="error-text">{error}</p>}
+            {error && (
+              <div className="form-error-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {error}
+              </div>
+            )}
 
             <button className="big-btn" onClick={handleCreateSession} disabled={loading}>
-              {loading ? "Creating..." : "Generate Session ID"}
+              {loading ? (
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <span className="btn-spinner" />
+                  Creating...
+                </span>
+              ) : "Generate Session ID"}
             </button>
 
             {createdSessionId && (
               <div className="session-id-box">
-                <p className="session-id-label">Your Session ID (share with participants)</p>
-                <div className="session-id-value">{createdSessionId}</div>
+                <p className="session-id-label">Session ID — share with participants</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                  <div className="session-id-value">{createdSessionId}</div>
+                  <button
+                    onClick={handleCopy}
+                    style={{
+                      background: copied ? "rgba(196,160,80,0.15)" : "transparent",
+                      border: "1px solid rgba(196,160,80,0.3)",
+                      borderRadius: 6, padding: "6px 12px",
+                      color: copied ? "var(--gold-pale)" : "var(--gold)",
+                      cursor: "pointer", fontSize: 12, fontFamily: "'Jost', sans-serif",
+                      transition: "all 0.18s", letterSpacing: "0.06em",
+                    }}
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
                 <p className="session-id-hint">
                   Session set for {DURATION_OPTIONS.find(o => o.value === durationMinutes)?.label}.
-                  Switch to Join Session tab to enter the event.
+                  Switch to the Join tab to enter the event.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* ════════════════════════════
-            JOIN TAB
-        ════════════════════════════ */}
+        {/* ── JOIN TAB ── */}
         {activeTab === "join" && (
           <div className="tab-content">
             <div className="field">
@@ -164,6 +203,7 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
                 placeholder="Enter Session ID (e.g. AB12CD)"
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value.toUpperCase())}
+                autoFocus
               />
             </div>
 
@@ -184,8 +224,8 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
 
             <div className="field">
               <label className="field-label">
-                Your interests
-                <span className="field-label-hint"> (optional — override for this session)</span>
+                Your interests for this session
+                <span className="field-label-hint"> (optional override)</span>
               </label>
               <div className="chip-row">
                 {ALL_INTERESTS.map((interest) => (
@@ -200,10 +240,22 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onLogout }
               </div>
             </div>
 
-            {error && <p className="error-text">{error}</p>}
+            {error && (
+              <div className="form-error-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {error}
+              </div>
+            )}
 
             <button className="big-btn" onClick={handleJoinSession} disabled={loading}>
-              {loading ? "Joining..." : "Enter Event"}
+              {loading ? (
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <span className="btn-spinner" />
+                  Joining...
+                </span>
+              ) : "Enter Event →"}
             </button>
           </div>
         )}

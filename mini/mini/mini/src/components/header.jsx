@@ -15,10 +15,6 @@ export default function Header({
 }) {
   const [showConnections, setShowConnections] = useState(false);
 
-  function toggleConnections() {
-    setShowConnections((v) => !v);
-  }
-
   function handlePersonClick(person) {
     setShowConnections(false);
     onOpenChat?.(person);
@@ -49,7 +45,7 @@ export default function Header({
             <div className="notification-wrap">
               <button
                 className={`notification-btn ${showConnections ? "notification-btn--active" : ""}`}
-                onClick={toggleConnections}
+                onClick={() => setShowConnections(v => !v)}
                 title="Connected users"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.75}}>
@@ -100,7 +96,7 @@ export default function Header({
             </div>
           )}
 
-          {/* Notification button — opens slide panel, no dropdown */}
+          {/* Notification button */}
           {sessionId && (
             <button
               className="notification-btn"
@@ -122,7 +118,7 @@ export default function Header({
 
           {onLeaveSession && (
             <button className="logout-btn" onClick={onLeaveSession}>
-              Leave
+              Leave Session
             </button>
           )}
         </div>
