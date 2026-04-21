@@ -1,5 +1,6 @@
-// const BASE_URL = "https://netmesh.onrender.com/api";
-const BASE_URL = "http://localhost:8000/api";
+// const BASE_URL = "http://localhost:8000/api";
+const BASE_URL = "https://netmesh.onrender.com/api";
+
 
 function getToken() {
   return localStorage.getItem("token");
@@ -51,6 +52,18 @@ const api = {
   logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+  },
+
+  async updateProfile(name, bio, interests) {
+    const result = await authFetch(`${BASE_URL}/auth/profile`, {
+      method: "PUT",
+      body: JSON.stringify({ name, bio, interests }),
+    });
+    if (result.success && result.token) {
+      localStorage.setItem("token", result.token);
+      localStorage.setItem("user", JSON.stringify(result.user));
+    }
+    return result;
   },
 
   async createSession(sessionName, durationMinutes = 120) {
@@ -106,12 +119,11 @@ const api = {
       );
       const text = await response.text();
       if (!text || text.trimStart().startsWith("<")) {
-        console.warn("[getConnections] non-JSON response — skipping connection restore");
         return { success: false, connections: [] };
       }
       return JSON.parse(text);
     } catch (err) {
-      console.warn("[getConnections] failed — skipping connection restore:", err.message);
+      console.warn("[getConnections] failed:", err.message);
       return { success: false, connections: [] };
     }
   },
