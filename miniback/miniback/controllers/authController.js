@@ -31,11 +31,11 @@ export async function register(req, res) {
     const { name, email, password, interests, bio } = req.body;
 
     if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email, and password are required." });
+      return res.status(400).json({ success: false, message: "Name, email, and password are required." });
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser)
-      return res.status(400).json({ message: "Email already registered. Please log in." });
+      return res.status(400).json({ success: false, message: "Email already registered. Please log in." });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -47,12 +47,9 @@ export async function register(req, res) {
       bio:       bio || "",
     });
 
-    // Generate embedding from bio + interests
     const profileText = `${(interests || []).join(", ")}. ${bio || ""}`.trim();
     if (profileText.length > 3) {
-      console.log("Generating embedding for:", name);
       newUser.embedding = await getEmbedding(profileText);
-      console.log("Embedding length:", newUser.embedding.length);
     }
 
     await newUser.save();
@@ -76,7 +73,7 @@ export async function register(req, res) {
     });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ message: "Server error. Please try again." });
+    res.status(500).json({ success: false, message: "Server error. Please try again." });
   }
 }
 
@@ -86,15 +83,15 @@ export async function login(req, res) {
     const { email, password } = req.body;
 
     if (!email || !password)
-      return res.status(400).json({ message: "Email and password are required." });
+      return res.status(400).json({ success: false, message: "Email and password are required." });
 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user)
-      return res.status(400).json({ message: "No account found with this email." });
+      return res.status(400).json({ success: false, message: "No account found with this email." });
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch)
-      return res.status(400).json({ message: "Incorrect password." });
+      return res.status(400).json({ success: false, message: "Incorrect password." });
 
     const token = jwt.sign(
       { userId: user._id, name: user.name, email: user.email },
@@ -115,6 +112,53 @@ export async function login(req, res) {
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ message: "Server error. Please try again." });
+    res.status(500).json({ success: false, message: "Server error. Please try again." });
+  }
+}
+
+// ── UPDATE PROFILE ──
+export async function updateProfile(req, res) {
+  try {
+    const userId = req.user.userId;
+    const { name, bio, interests } = req.body;
+
+    if (!name || !name.trim())
+      return res.status(400).json({ success: false, message: "Name is required." });
+
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found." });
+
+    user.name      = name.trim();
+    user.bio       = bio || "";
+    user.interests = interests || [];
+
+    const profileText = `${(interests || []).join(", ")}. ${bio || ""}`.trim();
+    if (profileText.length > 3) {
+      user.embedding = await getEmbedding(profileText);
+    }
+
+    await user.save();
+
+    const token = jwt.sign(
+      { userId: user._id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id:        user._id,
+        name:      user.name,
+        email:     user.email,
+        interests: user.interests,
+        bio:       user.bio,
+      },
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ success: false, message: "Server error. Please try again." });
   }
 }
