@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Header from "../components/header";
 import ProfileCard from "../components/ProfileCard";
 import api from "../services/api";
+import "../components/Dashboard.css";
 
 export default function DashboardPage({ expiresAt, currentUser, sessionId, requirement, sessionInterests, onLeaveSession, onLogout }) {
   const [recommendations, setRecommendations] = useState([]);

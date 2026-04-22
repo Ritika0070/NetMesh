@@ -1,10 +1,7 @@
-// const BASE_URL = "http://localhost:8000/api";
-const BASE_URL = "https://netmesh.onrender.com/api";
+// const BASE_URL = "https://netmesh.onrender.com/api";
+const BASE_URL = "http://localhost:8000/api";
 
-
-function getToken() {
-  return localStorage.getItem("token");
-}
+function getToken() { return localStorage.getItem("token"); }
 
 async function authFetch(url, options = {}) {
   const token = getToken();
@@ -20,7 +17,6 @@ async function authFetch(url, options = {}) {
 }
 
 const api = {
-
   async register(name, email, password, interests, bio) {
     const res = await fetch(`${BASE_URL}/auth/register`, {
       method: "POST",
@@ -52,18 +48,6 @@ const api = {
   logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-  },
-
-  async updateProfile(name, bio, interests) {
-    const result = await authFetch(`${BASE_URL}/auth/profile`, {
-      method: "PUT",
-      body: JSON.stringify({ name, bio, interests }),
-    });
-    if (result.success && result.token) {
-      localStorage.setItem("token", result.token);
-      localStorage.setItem("user", JSON.stringify(result.user));
-    }
-    return result;
   },
 
   async createSession(sessionName, durationMinutes = 120) {
@@ -110,17 +94,10 @@ const api = {
       const token = getToken();
       const response = await fetch(
         `${BASE_URL}/chat/connections?sessionId=${encodeURIComponent(sessionId)}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
       );
       const text = await response.text();
-      if (!text || text.trimStart().startsWith("<")) {
-        return { success: false, connections: [] };
-      }
+      if (!text || text.trimStart().startsWith("<")) return { success: false, connections: [] };
       return JSON.parse(text);
     } catch (err) {
       console.warn("[getConnections] failed:", err.message);
@@ -143,8 +120,7 @@ const api = {
   },
 
   async getMessages(sessionId, withUserId) {
-    const url = `${BASE_URL}/chat/messages?sessionId=${sessionId}&withUserId=${withUserId}`;
-    return authFetch(url);
+    return authFetch(`${BASE_URL}/chat/messages?sessionId=${sessionId}&withUserId=${withUserId}`);
   },
 
   async getNotifications(sessionId) {
