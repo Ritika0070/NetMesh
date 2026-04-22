@@ -6,6 +6,8 @@ import JoinSessionPage from "./pages/JoinSessionPage";
 import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import EditProfilePage from "./pages/EditProfilePage";
+import SettingsPage from "./pages/SettingsPage";
+import ContactPage from "./pages/ContactPage";
 import "./App.css";
 
 const PAGE_PATHS = {
@@ -16,6 +18,8 @@ const PAGE_PATHS = {
   "join-session": "/join-session",
   dashboard:      "/dashboard",
   "edit-profile": "/edit-profile",
+  settings:       "/settings",
+  contact:        "/contact",
 };
 
 function getDefaultPage(savedUser, savedSession) {
@@ -33,6 +37,8 @@ function getPageFromPath(pathname, savedUser, savedSession) {
     case "/join-session": return savedUser ? "join-session" : "landing";
     case "/dashboard":    return savedUser && savedSession ? "dashboard" : getDefaultPage(savedUser, savedSession);
     case "/edit-profile": return savedUser ? "edit-profile" : "landing";
+    case "/settings":     return savedUser ? "settings" : "landing";
+    case "/contact":      return savedUser ? "contact" : "landing";
     default:              return getDefaultPage(savedUser, savedSession);
   }
 }
@@ -62,11 +68,8 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (sessionInfo) {
-      localStorage.setItem("sessionInfo", JSON.stringify(sessionInfo));
-    } else {
-      localStorage.removeItem("sessionInfo");
-    }
+    if (sessionInfo) localStorage.setItem("sessionInfo", JSON.stringify(sessionInfo));
+    else localStorage.removeItem("sessionInfo");
   }, [sessionInfo]);
 
   useEffect(() => {
@@ -105,7 +108,10 @@ export default function App() {
     goToPage("landing", { replace: true });
   }
 
-  function handleProfileSave(updatedUser) { setCurrentUser(updatedUser); goToPage("home"); }
+  function handleProfileSave(updatedUser) {
+    setCurrentUser(updatedUser);
+    goToPage("home");
+  }
 
   return (
     <>
@@ -124,19 +130,15 @@ export default function App() {
           onLogout={handleLogout}
           onGoToDashboard={sessionInfo ? () => goToPage("dashboard") : null}
           onGoToEditProfile={() => goToPage("edit-profile")}
+          onGoToSettings={() => goToPage("settings")}
+          onGoToContact={() => goToPage("contact")}
         />
       )}
       {page === "register" && (
-        <RegisterPage
-          onRegisterSuccess={handleRegisterSuccess}
-          onGoToLogin={() => goToPage("login")}
-        />
+        <RegisterPage onRegisterSuccess={handleRegisterSuccess} onGoToLogin={() => goToPage("login")} />
       )}
       {page === "login" && (
-        <LoginPage
-          onLoginSuccess={handleLoginSuccess}
-          onGoToRegister={() => goToPage("register")}
-        />
+        <LoginPage onLoginSuccess={handleLoginSuccess} onGoToRegister={() => goToPage("register")} />
       )}
       {page === "join-session" && currentUser && (
         <JoinSessionPage
@@ -160,6 +162,18 @@ export default function App() {
         <EditProfilePage
           currentUser={currentUser}
           onSave={handleProfileSave}
+          onBack={() => goToPage("home")}
+        />
+      )}
+      {page === "settings" && currentUser && (
+        <SettingsPage
+          currentUser={currentUser}
+          onBack={() => goToPage("home")}
+        />
+      )}
+      {page === "contact" && currentUser && (
+        <ContactPage
+          currentUser={currentUser}
           onBack={() => goToPage("home")}
         />
       )}

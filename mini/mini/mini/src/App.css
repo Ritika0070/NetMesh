@@ -39,3 +39,63 @@ body {
 }
 
 #root { min-height: 100vh; }
+
+/* ══════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:        #1b1f23;
+  --bg2:       #252a30;
+  --bg3:       #2d3339;
+  --blue:      #3b94f7;
+  --blue-h:    #6aaffa;
+  --blue-dim:  rgba(59,148,247,0.12);
+  --blue-mid:  rgba(59,148,247,0.2);
+  --dark:      #e8eaed;
+  --text:      #d4d8dd;
+  --text-mid:  #9faab4;
+  --text-sub:  #7a8896;
+  --text-dim:  #4e5b66;
+  --border:    rgba(255,255,255,0.09);
+  --border2:   rgba(255,255,255,0.05);
+  --sh-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --sh-md: 0 4px 12px rgba(0,0,0,0.4);
+  --sh-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --green:     #22c55e;
+  --green-dim: rgba(34,197,94,0.1);
+  --red:       #f87171;
+  --red-dim:   rgba(248,113,113,0.1);
+}
+
+[data-theme="dark"] body { background: var(--bg); }
+
+[data-theme="dark"] .ep-card,
+[data-theme="dark"] .form-card,
+[data-theme="dark"] .js-card,
+[data-theme="dark"] .auth-card { background: var(--bg2); border-color: var(--border); }
+
+[data-theme="dark"] .auth-input-wrap,
+[data-theme="dark"] .auth-input,
+[data-theme="dark"] .auth-textarea,
+[data-theme="dark"] .js-input,
+[data-theme="dark"] .field-input {
+  background: var(--bg3);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .js-header,
+[data-theme="dark"] header { background: var(--bg2) !important; border-color: var(--border) !important; }
+
+[data-theme="dark"] .settings-account-card { background: var(--bg3); border-color: var(--border); }
+
+[data-theme="dark"] .home-page { background: var(--bg); }
+[data-theme="dark"] .home-header { background: var(--bg2) !important; }
+[data-theme="dark"] .home-profile-card,
+[data-theme="dark"] .home-card,
+[data-theme="dark"] .home-feature-card { background: var(--bg2) !important; border-color: var(--border) !important; }
+
+[data-theme="dark"] .profile-sidebar { background: var(--bg2); border-color: var(--border); }
+[data-theme="dark"] .tab-btn--active,
+[data-theme="dark"] .js-tab--active { background: var(--bg2) !important; }
+[data-theme="dark"] .js-tabs { background: var(--bg3) !important; }
