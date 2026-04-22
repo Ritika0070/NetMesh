@@ -162,3 +162,36 @@ export async function updateProfile(req, res) {
     res.status(500).json({ success: false, message: "Server error. Please try again." });
   }
 }
+
+// ── CHANGE PASSWORD ──
+export async function changePassword(req, res) {
+  try {
+    const userId = req.user.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword)
+      return res.status(400).json({ success: false, message: "Both current and new password are required." });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters." });
+
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found." });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch)
+      return res.status(400).json({ success: false, message: "Current password is incorrect." });
+
+    if (currentPassword === newPassword)
+      return res.status(400).json({ success: false, message: "New password must be different from current password." });
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ success: true, message: "Password changed successfully." });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ success: false, message: "Server error. Please try again." });
+  }
+}
