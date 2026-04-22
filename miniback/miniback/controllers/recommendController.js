@@ -1,20 +1,24 @@
 import User from "../models/User.js";
 import Session from "../models/Session.js";
 
+//check krta h ki number infinite toh nhi hh - agar infinite h to 0 return kr dega 
 function toSafeNumber(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+//text ko normalize kr dega - agar null h toh empty string nhi toh value ko trim aur lower case kr dega
 function normalizeString(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+//ek user ka interests array banayga usse string m covert krke, trim krke aur null ya undifined value ko empty string se denote krke
 function sanitizeInterests(interests) {
   return Array.isArray(interests)
     ? interests.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
 }
 
+//Interests ko humne match kia hh - u1 ka agr interest same hai u2 ke toh match ek kadam inc hoga fir matches ka perc return kr denge
 function getInterestScore(userInterests, otherInterests) {
   const current = sanitizeInterests(userInterests);
   const other   = sanitizeInterests(otherInterests);
@@ -35,6 +39,7 @@ function getInterestScore(userInterests, otherInterests) {
   return toSafeNumber(Math.round((matches / union.size) * 100));
 }
 
+// cosine ka func hh
 function cosine(a, b) {
   if (!a?.length || !b?.length) return 0;
 
