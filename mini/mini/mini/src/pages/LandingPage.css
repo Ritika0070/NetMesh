@@ -257,7 +257,17 @@
 /* ══════════════════════════════════════
    WHY US
    ══════════════════════════════════════ */
-.lp-why { padding: 96px 56px; max-width: 1200px; margin: 0 auto; }
+/* .lp-why {
+  min-height: 100vh;
+  padding: 72px 56px 34px;
+  max-width: 1360px;
+  margin: 0 auto;
+  background: #f3f2ee;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  scroll-margin-top: 0;
+}
 .lp-why-grid {
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 16px; margin-bottom: 56px;
@@ -281,7 +291,7 @@
 .lp-why-stat__desc { font-size: 12px; color: #7a7468; line-height: 1.7; font-weight: 300; margin: 0; }
 
 /* Compare table */
-.lp-why-compare {
+/* .lp-why-compare {
   display: grid; grid-template-columns: 1fr auto 1fr;
   gap: 20px; align-items: center; max-width: 640px; margin: 0 auto;
 }
@@ -296,12 +306,207 @@
 .lp-why-compare__col--us { border-color: #1a6fc4; background: rgba(26,111,196,0.02); }
 .lp-why-compare__label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-  color: #b0a99e; font-family: 'Sora', sans-serif; margin-bottom: 12px;
-}
+  color: #b0a99e; font-family: 'Sora', sans-serif; margin-bottom: 12px; */
+/* }
 .lp-why-compare__col--us .lp-why-compare__label { color: #1a6fc4; }
 .lp-why-compare__col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
 .lp-why-compare__col li { font-size: 13px; color: #b0a99e; font-family: 'Sora', sans-serif; }
-.lp-why-compare__col--us li { color: #3d3a35; }
+.lp-why-compare__col--us li { color: #3d3a35; } */ */
+.lp-why {
+  min-height: 100vh;
+  padding: 34px 56px 42px;
+  max-width: 1360px;
+  margin: 0 auto;
+  background: #f3f2ee;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  scroll-margin-top: 0;
+}
+
+.lp-why-header {
+  text-align: center;
+  margin-top: 48px;
+  margin-bottom: 34px;
+}
+
+.lp-why-header .lp-section-label {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.lp-why-header .lp-section-title {
+  text-align: center;
+  margin: 0 auto;
+  max-width: 720px;
+}
+
+.lp-why-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(280px, 360px);
+  gap: 54px;
+  justify-content: center;
+  align-items: center;
+}
+
+.lp-why-main {
+  min-width: 0;
+}
+
+.lp-why-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.lp-why-stat {
+  min-height: 170px;
+  background: #ffffff;
+  border: 1.5px solid #e8e4dc;
+  border-radius: 12px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lp-why-stat__num {
+  font-family: 'Lora', serif;
+  font-size: 38px;
+  font-weight: 400;
+  font-style: italic;
+  color: #1a6fc4;
+  line-height: 1;
+}
+
+.lp-why-stat__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1a1814;
+  font-family: 'Sora', sans-serif;
+}
+
+.lp-why-stat__desc {
+  font-size: 12px;
+  color: #7a7468;
+  line-height: 1.6;
+  font-weight: 300;
+  margin: 0;
+}
+
+.lp-why-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.lp-why-compare__col {
+  min-height: 190px;
+  background: #ffffff;
+  border: 1.5px solid #e8e4dc;
+  border-radius: 12px;
+  padding: 22px 26px;
+}
+
+.lp-why-compare__col--us {
+  border-color: #1a6fc4;
+  background: rgba(26,111,196,0.02);
+}
+
+.lp-why-compare__vs {
+  font-family: 'Lora', serif;
+  font-size: 24px;
+  font-style: italic;
+  color: #b0a99e;
+}
+
+.lp-why-compare__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b0a99e;
+  margin-bottom: 14px;
+}
+
+.lp-why-compare__col--us .lp-why-compare__label {
+  color: #1a6fc4;
+}
+
+.lp-why-compare__col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-why-compare__col li {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: #b0a99e;
+}
+
+.lp-why-compare__col--us li {
+  color: #3d3a35;
+}
+
+.lp-mark {
+  width: 14px;
+  flex-shrink: 0;
+  font-weight: 800;
+}
+
+.lp-mark--bad {
+  color: #d33a2c;
+}
+
+.lp-mark--good {
+  color: #1a6fc4;
+}
+
+.lp-why-lottie {
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-48px);
+}
+
+@media (max-width: 1050px) {
+  .lp-why {
+    min-height: auto;
+  }
+
+  .lp-why-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-why-lottie {
+    height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-why {
+    padding: 64px 20px;
+  }
+
+  .lp-why-grid,
+  .lp-why-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-why-compare__vs {
+    display: none;
+  }
+}
 
 /* ══════════════════════════════════════
    HOW IT WORKS
@@ -757,3 +962,83 @@
   width: 100%;
   height: 420px;
 }
+
+/* WHY US final positioning override */
+.lp-why {
+  padding-top: 105px !important;
+}
+
+.lp-why-header {
+  margin-top: 52px !important;
+  margin-bottom: 34px !important;
+  text-align: center !important;
+}
+
+.lp-why-header .lp-section-label,
+.lp-why-header .lp-section-title {
+  text-align: center !important;
+}
+
+.lp-why-layout {
+  grid-template-columns: minmax(0, 760px) minmax(360px, 470px) !important;
+  gap: 70px !important;
+}
+
+.lp-why-lottie {
+  height: 560px !important;
+  transform: translateX(70px) scale(1.18) !important;
+  transform-origin: center center !important;
+}
+
+.lp-why-lottie > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (max-width: 1050px) {
+  .lp-why-lottie {
+    transform: none !important;
+    height: 360px !important;
+  }
+}
+
+
+/* WHY US fine tuning */
+.lp-why {
+  padding-top: 82px !important;
+}
+
+.lp-why-header {
+  margin-top: 28px !important;
+  margin-bottom: 34px !important;
+}
+
+.lp-why-lottie {
+  position: relative !important;
+  height: 560px !important;
+  transform: translateX(70px) scale(1.18) !important;
+  transform-origin: center center !important;
+}
+
+.lp-why-lottie::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 8%;
+  bottom: 48px;
+  height: 2px;
+  background: rgba(26, 24, 20, 0.22);
+  border-radius: 999px;
+}
+
+
+/* Move Lottie floor line up to touch feet */
+.lp-why-lottie::after {
+  bottom: 168px !important;
+}
+
+
+.lp-why-lottie::after {
+  bottom: 185px !important;
+}
+

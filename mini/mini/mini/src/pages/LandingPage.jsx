@@ -689,6 +689,7 @@
 //     </div>
 //   );
 // }
+import officeWavesAnim from "../assets/Office worker team work hello office waves.json";
 import { useEffect, useRef, useState } from "react";
 import "./LandingPage.css";
 import { Player } from "@lottiefiles/react-lottie-player";
@@ -992,7 +993,7 @@ export default function LandingPage({ currentUser, onGoToLogin, onGoToRegister, 
         </div>
       </section>
 
-      <section className="lp-why" id="why-us">
+      {/* <section className="lp-why" id="why-us">
         <p className="lp-section-label">WHY US</p>
         <h2 className="lp-section-title">Built different, on purpose</h2>
         <div className="lp-why-grid">
@@ -1040,8 +1041,82 @@ export default function LandingPage({ currentUser, onGoToLogin, onGoToRegister, 
             </ul>
           </div>
         </div>
-      </section>
+      </section> */}
 
+<section className="lp-why" id="why-us">
+  <div className="lp-why-header">
+    <p className="lp-section-label">WHY US</p>
+    <h2 className="lp-section-title">Built different, on purpose</h2>
+  </div>
+
+  <div className="lp-why-layout">
+    <div className="lp-why-main">
+      <div className="lp-why-grid">
+        <div className="lp-why-stat">
+          <span className="lp-why-stat__num">AI</span>
+          <span className="lp-why-stat__label">Powered Matching</span>
+          <p className="lp-why-stat__desc">Cosine similarity on bio embeddings + interest overlap — not random, not alphabetical.</p>
+        </div>
+
+        <div className="lp-why-stat">
+          <span className="lp-why-stat__num">0</span>
+          <span className="lp-why-stat__label">Data After Session</span>
+          <p className="lp-why-stat__desc">Sessions auto-expire. Messages, connections, and chats are deleted. No digital footprint.</p>
+        </div>
+
+        <div className="lp-why-stat">
+          <span className="lp-why-stat__num">2s</span>
+          <span className="lp-why-stat__label">Notification Latency</span>
+          <p className="lp-why-stat__desc">Connection requests and alerts reach you in under 2 seconds via live polling.</p>
+        </div>
+
+        <div className="lp-why-stat">
+          <span className="lp-why-stat__num">∞</span>
+          <span className="lp-why-stat__label">Sessions, No Limit</span>
+          <p className="lp-why-stat__desc">Create as many sessions as you need. Each event gets its own isolated, clean space.</p>
+        </div>
+      </div>
+
+      <div className="lp-why-compare">
+        <div className="lp-why-compare__col">
+          <p className="lp-why-compare__label">Other Tools</p>
+          <ul>
+            <li><span className="lp-mark lp-mark--bad">x</span> Manual card exchange</li>
+            <li><span className="lp-mark lp-mark--bad">x</span> No smart matching</li>
+            <li><span className="lp-mark lp-mark--bad">x</span> Data stored forever</li>
+            <li><span className="lp-mark lp-mark--bad">x</span> Clunky follow-up emails</li>
+            <li><span className="lp-mark lp-mark--bad">x</span> No real-time chat</li>
+          </ul>
+        </div>
+
+        <div className="lp-why-compare__vs">vs</div>
+
+        <div className="lp-why-compare__col lp-why-compare__col--us">
+          <p className="lp-why-compare__label">NetMesh</p>
+          <ul>
+            <li><span className="lp-mark lp-mark--good">+</span> One-tap connect</li>
+            <li><span className="lp-mark lp-mark--good">+</span> AI interest matching</li>
+            <li><span className="lp-mark lp-mark--good">+</span> Auto-expiring sessions</li>
+            <li><span className="lp-mark lp-mark--good">+</span> In-session live chat</li>
+            <li><span className="lp-mark lp-mark--good">+</span> Real-time notifications</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div className="lp-why-lottie">
+      <Player autoplay loop src={officeWavesAnim} style={{ width: "100%", height: "100%" }} />
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+     {/* how-it-works */}
       <section className="lp-guide" id="how-it-works">
         <p className="lp-section-label">USAGE GUIDE</p>
         <h2 className="lp-section-title">Up and running in four steps</h2>
