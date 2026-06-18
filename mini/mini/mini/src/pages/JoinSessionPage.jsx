@@ -15,12 +15,22 @@ const DURATION_OPTIONS = [
 const ALL_INTERESTS    = ["AI","Startups","Music","Design","Web3","Climate","Health","Fintech","Education","Gaming","Robotics","Marketing"];
 const ALL_REQUIREMENTS = ["Networking","Job Opportunities","Collaboration","Mentorship","Investment","Co-founder Hunt"];
 
-function saveSessionToHistory(sessionId, requirement, sessionInterests) {
+function saveSessionToHistory(sessionId, sessionName, requirement, sessionInterests, type) {
   const history = JSON.parse(localStorage.getItem("sessionHistory") || "[]");
-  // avoid duplicates
   const filtered = history.filter(s => s.sessionId !== sessionId);
-  const entry = { sessionId, requirement, sessionInterests, joinedAt: new Date().toISOString() };
-  localStorage.setItem("sessionHistory", JSON.stringify([entry, ...filtered].slice(0, 20)));
+  const entry = {
+    sessionId,
+    sessionName: sessionName || sessionId,
+    requirement,
+    sessionInterests,
+    type, // "joined" or "created"
+    joinedAt: new Date().toISOString(),
+    connectionsCount: 0,
+    connectionNames: [],
+    participantNames: [],   // for created sessions
+    participantCount: 0,
+  };
+  localStorage.setItem("sessionHistory", JSON.stringify([entry, ...filtered].slice(0, 30)));
 }
 
 export default function JoinSessionPage({ currentUser, onJoinSuccess, onBackToHome }) {
@@ -40,29 +50,34 @@ export default function JoinSessionPage({ currentUser, onJoinSuccess, onBackToHo
     );
   }
 
-  async function handleCreateSession() {
-    if (!sessionName.trim()) return setError("Please enter a session name.");
-    setLoading(true); setError("");
-    const result = await api.createSession(sessionName, durationMinutes);
-    setLoading(false);
-    if (result.success) { setCreatedSessionId(result.sessionId); setSessionId(result.sessionId); }
-    else { setError("Could not create session. Try again."); }
+async function handleCreateSession() {
+  if (!sessionName.trim()) return setError("Please enter a session name.");
+  setLoading(true); setError("");
+  const result = await api.createSession(sessionName, durationMinutes);
+  setLoading(false);
+  if (result.success) {
+    setCreatedSessionId(result.sessionId);
+    setSessionId(result.sessionId);
+    // Save created session to history immediately
+    saveSessionToHistory(result.sessionId, sessionName, "", [], "created");
+  } else {
+    setError("Could not create session. Try again.");
   }
+}
 
-  async function handleJoinSession() {
-    if (!sessionId.trim()) return setError("Please enter a Session ID.");
-    if (!requirement)      return setError("Please select what you are looking for.");
-    setLoading(true); setError("");
-    const result = await api.joinSession(sessionId, requirement, sessionInterests);
-    setLoading(false);
-    if (result.success) {
-      saveSessionToHistory(result.sessionId, requirement, sessionInterests);
-      onJoinSuccess(result.sessionId, requirement, sessionInterests, result.expiresAt);
-    } else {
-      setError(result.error);
-    }
+async function handleJoinSession() {
+  if (!sessionId.trim()) return setError("Please enter a Session ID.");
+  if (!requirement)      return setError("Please select what you are looking for.");
+  setLoading(true); setError("");
+  const result = await api.joinSession(sessionId, requirement, sessionInterests);
+  setLoading(false);
+  if (result.success) {
+    saveSessionToHistory(result.sessionId, result.sessionName, requirement, sessionInterests, "joined");
+    onJoinSuccess(result.sessionId, requirement, sessionInterests, result.expiresAt);
+  } else {
+    setError(result.error);
   }
-
+}
   return (
     <div className="js-page">
       {/* Header */}
